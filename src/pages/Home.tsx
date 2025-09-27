@@ -82,7 +82,7 @@ export default function Home() {
   }, [games, search, sortKey, sortOrder]);
 
   return (
-    <div className="p-8 w-full space-y-6">
+    <div className="p-8 w-full space-y-6 text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-900 min-h-screen">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-3xl font-bold">Liste des jeux</h1>
         <Link to="/edit/new">
@@ -96,17 +96,17 @@ export default function Home() {
           placeholder="Rechercher par titre ou auteur..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="flex-1"
+          className="flex-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-green-500"
         />
 
         <Select
           value={sortKey}
           onValueChange={(value) => setSortKey(value as SortKey)}
         >
-          <SelectTrigger className="w-48">
+          <SelectTrigger className="w-48 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
             <SelectValue placeholder="Trier par" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
             <SelectItem value="title">Titre</SelectItem>
             <SelectItem value="author">Auteur</SelectItem>
             <SelectItem value="version">Version</SelectItem>
@@ -118,10 +118,10 @@ export default function Home() {
           value={sortOrder}
           onValueChange={(value) => setSortOrder(value as SortOrder)}
         >
-          <SelectTrigger className="w-32">
+          <SelectTrigger className="w-32 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
             <SelectValue placeholder="Ordre" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
             <SelectItem value="asc">Croissant</SelectItem>
             <SelectItem value="desc">Décroissant</SelectItem>
           </SelectContent>
@@ -130,7 +130,7 @@ export default function Home() {
 
       {/* Tableau */}
       <div className="overflow-x-auto">
-        <Table className="w-full table-auto">
+        <Table className="w-full table-auto border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
           <TableHeader>
             <TableRow>
               <TableHead>Fichier</TableHead>
@@ -145,7 +145,10 @@ export default function Home() {
           <TableBody>
             {filteredGames.length > 0 ? (
               filteredGames.map((game) => (
-                <TableRow key={game.fileName}>
+                <TableRow
+                  key={game.fileName}
+                  className="hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
                   <TableCell>{game.fileName}</TableCell>
                   <TableCell>{game.title}</TableCell>
                   <TableCell>{game.author}</TableCell>
@@ -162,7 +165,10 @@ export default function Home() {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-gray-500">
+                <TableCell
+                  colSpan={6}
+                  className="text-center text-gray-500 dark:text-gray-400"
+                >
                   Aucun jeu trouvé.
                 </TableCell>
               </TableRow>

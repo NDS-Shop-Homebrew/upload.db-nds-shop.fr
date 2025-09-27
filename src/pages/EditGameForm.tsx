@@ -220,7 +220,7 @@ export default function EditGameForm() {
             {selectedFiles.map((f, i) => (
               <span
                 key={i}
-                className="px-2 py-1 bg-gray-800 text-white rounded text-xs"
+                className="px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded text-xs"
               >
                 {f}
               </span>
@@ -231,13 +231,20 @@ export default function EditGameForm() {
     );
   };
 
-  if (loading) return <div className="p-6 text-center">Chargement...</div>;
+  if (loading)
+    return (
+      <div className="p-6 text-center text-gray-900 dark:text-gray-100">
+        Chargement...
+      </div>
+    );
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
-      <Card className="shadow-xl dark:bg-gray-900">
+    <div className="p-6 max-w-5xl mx-auto text-gray-900 dark:text-gray-100">
+      <Card className="shadow-xl bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold">Ajouter / Éditer un jeu</CardTitle>
+          <CardTitle className="text-2xl font-bold">
+            Ajouter / Éditer un jeu
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -248,7 +255,7 @@ export default function EditGameForm() {
                 name="title"
                 value={game.title}
                 onChange={handleInputChange}
-                className="mt-1"
+                className="mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-green-500"
               />
             </div>
             <div>
@@ -258,7 +265,7 @@ export default function EditGameForm() {
                 name="author"
                 value={game.author}
                 onChange={handleInputChange}
-                className="mt-1"
+                className="mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-green-500"
               />
             </div>
             <div>
@@ -285,7 +292,7 @@ export default function EditGameForm() {
                 name="updated"
                 value={game.updated}
                 onChange={handleInputChange}
-                className="mt-1"
+                className="mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-green-500"
               />
             </div>
           </div>

@@ -27,7 +27,7 @@ export function NavBar() {
   }, []);
 
   return (
-    <header className="w-full px-4 py-2 border-b border-gray-700 relative z-50">
+    <header className="w-full px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 relative z-50">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         <Link
           to="/"
@@ -64,15 +64,11 @@ export function NavBar() {
         </button>
       </div>
 
-      {/* Mobile menu */}
       <div
         ref={menuRef}
-        className={`md:hidden absolute top-full left-0 w-full flex flex-col items-start gap-3 px-6 py-4 ease-in-out transform origin-top ${
+        className={`md:hidden absolute top-full left-0 w-full flex flex-col items-start gap-3 px-6 py-4 transition-transform origin-top ${
           menuOpen ? "scale-y-100" : "scale-y-0"
-        } bg-white dark:bg-[oklch(0.14_0_0)]`}
-        style={{
-          transformOrigin: "top",
-        }}
+        } bg-white dark:bg-gray-900`}
       >
         <Link to="/" onClick={() => setMenuOpen(false)}>
           Accueil
@@ -80,7 +76,6 @@ export function NavBar() {
         <Link to="/about" onClick={() => setMenuOpen(false)}>
           A Propos
         </Link>
-
         <div className="mt-4">
           <DarkModeToggle />
         </div>
