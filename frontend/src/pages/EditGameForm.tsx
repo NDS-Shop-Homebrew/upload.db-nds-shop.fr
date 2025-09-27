@@ -65,7 +65,7 @@ export default function EditGameForm() {
     const fetchGame = async () => {
       setLoading(true);
       try {
-        const res = await fetch("http://localhost:3000/api/games");
+        const res = await fetch("http://localhost:3002/api/games");
         const games: Game[] = await res.json();
         const g = games.find(
           (game) =>
@@ -105,7 +105,7 @@ export default function EditGameForm() {
     try {
       const formData = new FormData();
       formData.append(field, file);
-      const res = await fetch(`http://localhost:3000/api/upload/${endpoint}`, {
+      const res = await fetch(`http://localhost:3002/api/upload/${endpoint}`, {
         method: "POST",
         body: formData,
       });
@@ -159,8 +159,8 @@ export default function EditGameForm() {
     const method = fileName && fileName !== "new" ? "PUT" : "POST";
     const url =
       method === "PUT"
-        ? `http://localhost:3000/api/games/${fileName}`
-        : "http://localhost:3000/api/games";
+        ? `http://localhost:3002/api/games/${fileName}`
+        : "http://localhost:3002/api/games";
     try {
       const res = await fetch(url, {
         method,

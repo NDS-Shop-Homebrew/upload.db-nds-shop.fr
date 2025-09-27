@@ -19,7 +19,7 @@ import {
 import { Link } from "react-router-dom";
 
 interface Game {
-  title: string;
+  title: string;  
   author: string;
   version: string;
   updated: string;
@@ -37,7 +37,7 @@ export default function Home() {
 
   const fetchGames = async () => {
     try {
-      const res = await fetch("http://localhost:3000/api/games");
+      const res = await fetch("http://localhost:3002/api/games");
       const data: Game[] = await res.json();
 
       const gamesWithFileName = data.map((g: Game) => ({

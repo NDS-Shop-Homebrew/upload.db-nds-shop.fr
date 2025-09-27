@@ -4,9 +4,9 @@ import bcrypt from "bcrypt";
 const prisma = new PrismaClient();
 
 async function main() {
-  const username = "CreeperTV";
-  const password = "gTE9mK&5533K#iYu7x@K";
-  const role = "admin";
+  const username = "";
+  const password = "";
+  const role = "";
 
   // Hash du mot de passe
   const hashedPassword = await bcrypt.hash(password, 10);

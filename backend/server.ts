@@ -11,7 +11,7 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3002;
 const GAMES_PATH = process.env.GAMES_PATH!;
 const ICONS_PATH = process.env.ICONS_PATH!;
 const SCREENSHOTS_PATH = process.env.SCREENSHOTS_PATH!;
