@@ -4,6 +4,7 @@ import path from "path";
 import dotenv from "dotenv";
 import cors from "cors";
 import multer from "multer";
+import authRoutes from "./auth.ts";
 
 dotenv.config();
 const app = express();
@@ -17,10 +18,11 @@ const SCREENSHOTS_PATH = process.env.SCREENSHOTS_PATH!;
 const ROMS_PATH = process.env.ROMS_PATH!;
 const FORWARDER_PATH = process.env.FORWARDER_PATH!;
 
-// Création des dossiers si inexistants
 [ICONS_PATH, SCREENSHOTS_PATH, ROMS_PATH, FORWARDER_PATH].forEach((dir) => {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
+
+app.use("/api/auth", authRoutes);
 
 const formatDate = () => {
   const d = new Date();
@@ -42,7 +44,6 @@ const formatDate = () => {
   );
 };
 
-// Multer configs avec conservation du nom original
 const storageWithOriginalName = (dest: string) =>
   multer.diskStorage({
     destination: dest,

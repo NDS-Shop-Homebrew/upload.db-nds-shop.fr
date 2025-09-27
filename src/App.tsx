@@ -1,24 +1,34 @@
-
 import { Routes, Route } from "react-router-dom";
 import Home from "./pages/Home";
 import Layout from "./components/Layout";
 import NotFound from "./pages/NotFound";
-// import About from "./pages/About";
 import EditGameForm from "./pages/EditGameForm";
+import Login from "./pages/Login";
+import PrivateRoute from "./components/PrivateRoute";
+import { AuthProvider } from "./context/AuthContext";
 
 export default function App() {
   return (
-    <Routes>
-      {/* Routes avec Layout (Navbar + Footer) */}
-      <Route element={<Layout />}>
-        {/* Routes publiques */}
-        <Route path="/" element={<Home />} />
-        <Route path="/edit/:fileName" element={<EditGameForm />} />
-        {/* <Route path="/about" element={<About />} /> */}
-      </Route>
+    <AuthProvider>
+      <Routes>
+        {/* Route publique */}
+        <Route path="/login" element={<Login />} />
 
-      {/* Route 404 hors Layout */}
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+        {/* Routes privées */}
+        <Route
+          element={
+            <PrivateRoute>
+              <Layout />
+            </PrivateRoute>
+          }
+        >
+          <Route path="/" element={<Home />} />
+          <Route path="/edit/:fileName" element={<EditGameForm />} />
+        </Route>
+
+        {/* Route 404 */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </AuthProvider>
   );
 }
