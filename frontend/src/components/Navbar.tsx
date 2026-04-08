@@ -6,15 +6,15 @@ import {
 } from "./ui/navigation-menu";
 import { Link } from "react-router-dom";
 import { useState, useRef, useEffect } from "react";
-import {
-  Menu as MenuIcon,
-  Close as CloseIcon,
-} from "@mui/icons-material";
+import { Menu, X, LogOut } from "lucide-react";
 import { DarkModeToggle } from "./DarkModeToggle";
+import { useAuth } from "../context/AuthContext";
+import { Button } from "./ui/button";
 
 export function NavBar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const { isAuthenticated, logout } = useAuth();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -52,33 +52,65 @@ export function NavBar() {
             <NavigationMenuItem>
               <DarkModeToggle />
             </NavigationMenuItem>
+            {isAuthenticated && (
+              <NavigationMenuItem>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={logout}
+                  className="gap-2"
+                >
+                  <LogOut size={18} />
+                  Déconnexion
+                </Button>
+              </NavigationMenuItem>
+            )}
           </NavigationMenuList>
         </NavigationMenu>
 
-        <button
-          className="md:hidden z-50"
-          onClick={() => setMenuOpen(!menuOpen)}
-          aria-label="Menu"
-        >
-          {menuOpen ? <CloseIcon /> : <MenuIcon />}
-        </button>
+        <div className="md:hidden flex items-center gap-4 z-50">
+          <DarkModeToggle />
+          <button onClick={() => setMenuOpen(!menuOpen)} aria-label="Menu">
+            {menuOpen ? <X /> : <Menu />}
+          </button>
+        </div>
       </div>
 
       <div
         ref={menuRef}
-        className={`md:hidden absolute top-full left-0 w-full flex flex-col items-start gap-3 px-6 py-4 transition-transform origin-top ${
-          menuOpen ? "scale-y-100" : "scale-y-0"
-        } bg-white dark:bg-gray-900`}
+        className={`md:hidden absolute top-full left-0 w-full flex flex-col items-start gap-4 px-6 py-4 border-b border-gray-200 dark:border-gray-700 transition-all origin-top ${
+          menuOpen
+            ? "scale-y-100 opacity-100"
+            : "scale-y-0 opacity-0 pointer-events-none"
+        } bg-white dark:bg-gray-900 shadow-lg`}
       >
-        <Link to="/" onClick={() => setMenuOpen(false)}>
+        <Link
+          to="/"
+          onClick={() => setMenuOpen(false)}
+          className="w-full font-medium py-2"
+        >
           Accueil
         </Link>
-        <Link to="/about" onClick={() => setMenuOpen(false)}>
+        <Link
+          to="/about"
+          onClick={() => setMenuOpen(false)}
+          className="w-full font-medium py-2"
+        >
           A Propos
         </Link>
-        <div className="mt-4">
-          <DarkModeToggle />
-        </div>
+        {isAuthenticated && (
+          <Button
+            variant="outline"
+            className="w-full justify-start gap-2 mt-2"
+            onClick={() => {
+              logout();
+              setMenuOpen(false);
+            }}
+          >
+            <LogOut size={18} />
+            Déconnexion
+          </Button>
+        )}
       </div>
     </header>
   );

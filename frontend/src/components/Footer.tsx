@@ -1,7 +1,4 @@
-import {
-  Twitter as TwitterIcon,
-  GitHub as GitHubIcon,
-} from "@mui/icons-material";
+import { Twitter, Github } from "lucide-react";
 
 export default function Footer() {
   const version = import.meta.env.VITE_APP_VERSION || "dev";
@@ -25,7 +22,7 @@ export default function Footer() {
             rel="noreferrer"
             className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
           >
-            <TwitterIcon fontSize="large" />
+            <Twitter size={28} />
           </a>
           <a
             href="https://github.com/TheRinzler65"
@@ -33,7 +30,7 @@ export default function Footer() {
             rel="noreferrer"
             className="hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
           >
-            <GitHubIcon fontSize="large" />
+            <Github size={28} />
           </a>
         </div>
 

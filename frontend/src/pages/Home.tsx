@@ -8,41 +8,48 @@ import {
   TableCell,
 } from "../components/ui/table";
 import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input"; // shadecn/ui
+import { Input } from "../components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../components/ui/select"; // shadecn/ui
+} from "../components/ui/select";
 import { Link } from "react-router-dom";
+import { Search, Plus, Edit } from "lucide-react";
 
 interface Game {
-  title: string;  
+  title: string;
   author: string;
   version: string;
   updated: string;
-  fileName: string;
+  fileName?: string;
 }
 
 type SortKey = "title" | "author" | "version" | "updated";
 type SortOrder = "asc" | "desc";
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3002";
+
 export default function Home() {
   const [games, setGames] = useState<Game[]>([]);
   const [search, setSearch] = useState("");
-  const [sortKey, setSortKey] = useState<SortKey>("title");
-  const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
+  const [sortKey, setSortKey] = useState<SortKey>("updated");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
+  const [isLoading, setIsLoading] = useState(true);
 
   const fetchGames = async () => {
+    setIsLoading(true);
     try {
-      const res = await fetch("http://localhost:3002/api/games");
+      const res = await fetch(`${API_URL}/api/games`);
+      if (!res.ok) throw new Error("Erreur serveur");
       const data: Game[] = await res.json();
 
-      const gamesWithFileName = data.map((g: Game) => ({
+      const gamesWithFileName = data.map((g) => ({
         ...g,
         fileName:
+          g.fileName ||
           g.title
             .toLowerCase()
             .replace(/[^a-z0-9]+/g, "-")
@@ -52,6 +59,8 @@ export default function Home() {
       setGames(gamesWithFileName);
     } catch (err) {
       console.error("Erreur récupération jeux :", err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -60,20 +69,21 @@ export default function Home() {
   }, []);
 
   const filteredGames = useMemo(() => {
-    return games
+    return [...games]
       .filter(
         (g) =>
           g.title.toLowerCase().includes(search.toLowerCase()) ||
-          g.author.toLowerCase().includes(search.toLowerCase())
+          g.author.toLowerCase().includes(search.toLowerCase()),
       )
       .sort((a, b) => {
-        let valA: string | number = a[sortKey];
-        let valB: string | number = b[sortKey];
-
         if (sortKey === "updated") {
-          valA = new Date(a.updated).getTime();
-          valB = new Date(b.updated).getTime();
+          const timeA = new Date(a.updated).getTime();
+          const timeB = new Date(b.updated).getTime();
+          return sortOrder === "asc" ? timeA - timeB : timeB - timeA;
         }
+
+        const valA = (a[sortKey] || "").toString().toLowerCase();
+        const valB = (b[sortKey] || "").toString().toLowerCase();
 
         if (valA < valB) return sortOrder === "asc" ? -1 : 1;
         if (valA > valB) return sortOrder === "asc" ? 1 : -1;
@@ -82,93 +92,122 @@ export default function Home() {
   }, [games, search, sortKey, sortOrder]);
 
   return (
-    <div className="p-8 w-full space-y-6 text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-900 min-h-screen">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-3xl font-bold">Liste des jeux</h1>
+    <div className="p-8 w-full max-w-7xl mx-auto space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Bibliothèque de jeux
+          </h1>
+          <p className="text-muted-foreground">
+            Gérez vos fichiers JSON et métadonnées.
+          </p>
+        </div>
         <Link to="/edit/new">
-          <Button>Ajouter un jeu</Button>
+          <Button className="gap-2">
+            <Plus size={18} />
+            Ajouter un jeu
+          </Button>
         </Link>
       </div>
 
-      {/* Recherche et tri */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 mb-4 space-y-2 sm:space-y-0">
-        <Input
-          placeholder="Rechercher par titre ou auteur..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-green-500"
-        />
+      <div className="flex flex-col md:flex-row items-center gap-4 bg-card p-4 rounded-lg border shadow-sm">
+        <div className="relative flex-1 w-full">
+          <Search
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+            size={18}
+          />
+          <Input
+            placeholder="Rechercher par titre ou auteur..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-10"
+          />
+        </div>
 
-        <Select
-          value={sortKey}
-          onValueChange={(value) => setSortKey(value as SortKey)}
-        >
-          <SelectTrigger className="w-48 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
-            <SelectValue placeholder="Trier par" />
-          </SelectTrigger>
-          <SelectContent className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
-            <SelectItem value="title">Titre</SelectItem>
-            <SelectItem value="author">Auteur</SelectItem>
-            <SelectItem value="version">Version</SelectItem>
-            <SelectItem value="updated">Mise à jour</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex gap-2 w-full md:w-auto">
+          <Select
+            value={sortKey}
+            onValueChange={(v) => setSortKey(v as SortKey)}
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Trier par" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="title">Titre</SelectItem>
+              <SelectItem value="author">Auteur</SelectItem>
+              <SelectItem value="version">Version</SelectItem>
+              <SelectItem value="updated">Mise à jour</SelectItem>
+            </SelectContent>
+          </Select>
 
-        <Select
-          value={sortOrder}
-          onValueChange={(value) => setSortOrder(value as SortOrder)}
-        >
-          <SelectTrigger className="w-32 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
-            <SelectValue placeholder="Ordre" />
-          </SelectTrigger>
-          <SelectContent className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
-            <SelectItem value="asc">Croissant</SelectItem>
-            <SelectItem value="desc">Décroissant</SelectItem>
-          </SelectContent>
-        </Select>
+          <Select
+            value={sortOrder}
+            onValueChange={(v) => setSortOrder(v as SortOrder)}
+          >
+            <SelectTrigger className="w-[130px]">
+              <SelectValue placeholder="Ordre" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="asc">Croissant</SelectItem>
+              <SelectItem value="desc">Décroissant</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
-      {/* Tableau */}
-      <div className="overflow-x-auto">
-        <Table className="w-full table-auto border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+      <div className="rounded-md border bg-card">
+        <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Fichier</TableHead>
               <TableHead>Titre</TableHead>
-              <TableHead>Auteur</TableHead>
-              <TableHead>Version</TableHead>
-              <TableHead>Mise à jour</TableHead>
-              <TableHead>Actions</TableHead>
+              <TableHead className="hidden md:table-cell">Auteur</TableHead>
+              <TableHead className="hidden md:table-cell">Version</TableHead>
+              <TableHead className="hidden md:table-cell">
+                Dernière MAJ
+              </TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
-
           <TableBody>
-            {filteredGames.length > 0 ? (
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-10">
+                  Chargement...
+                </TableCell>
+              </TableRow>
+            ) : filteredGames.length > 0 ? (
               filteredGames.map((game) => (
-                <TableRow
-                  key={game.fileName}
-                  className="hover:bg-gray-100 dark:hover:bg-gray-700"
-                >
-                  <TableCell>{game.fileName}</TableCell>
-                  <TableCell>{game.title}</TableCell>
-                  <TableCell>{game.author}</TableCell>
-                  <TableCell>{game.version}</TableCell>
-                  <TableCell>
+                <TableRow key={game.fileName}>
+                  <TableCell className="font-medium">
+                    <div className="flex flex-col">
+                      <span>{game.title}</span>
+                      <span className="text-xs text-muted-foreground md:hidden">
+                        {game.author}
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    {game.author}
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    {game.version}
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">
                     {new Date(game.updated).toLocaleDateString()}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-right">
                     <Link to={`/edit/${game.fileName}`}>
-                      <Button size="sm">Modifier</Button>
+                      <Button variant="outline" size="sm" className="gap-2">
+                        <Edit size={14} />
+                        Modifier
+                      </Button>
                     </Link>
                   </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell
-                  colSpan={6}
-                  className="text-center text-gray-500 dark:text-gray-400"
-                >
+                <TableCell colSpan={5} className="h-24 text-center">
                   Aucun jeu trouvé.
                 </TableCell>
               </TableRow>

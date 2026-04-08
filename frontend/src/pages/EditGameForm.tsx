@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Button } from "../components/ui/button";
@@ -9,7 +9,10 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  CardDescription,
 } from "../components/ui/card";
+import { ArrowLeft, Save } from "lucide-react";
+import { FileUploader } from "../components/FileUploader";
 
 interface Screenshot {
   url: string;
@@ -32,18 +35,28 @@ interface Game {
 
 const availableCategories = ["game", "homebrew", "emulator"];
 const availableSystems = ["DS", "3DS"];
-const availableVersions = ["(Europe)", "(Europe) (En,Fr,De,Es,It)"];
+const availableVersions = [
+  "(Europe)",
+  "(Europe) (En,Fr,De,Es,It)",
+  "(USA)",
+  "(Japan)",
+];
+
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3002";
 
 const formatDate = () => {
   const d = new Date();
   const pad = (n: number) => n.toString().padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
-    d.getHours()
+    d.getHours(),
   )}:${pad(d.getMinutes())}:${pad(d.getSeconds())}+02:00`;
 };
 
 export default function EditGameForm() {
   const { fileName } = useParams<{ fileName: string }>();
+  const navigate = useNavigate();
+  const isNew = !fileName || fileName === "new";
+
   const [game, setGame] = useState<Game>({
     title: "",
     author: "",
@@ -52,37 +65,43 @@ export default function EditGameForm() {
     downloads: {},
     screenshots: [],
     icon: "",
-    version: "",
+    version: "(Europe)",
     updated: formatDate(),
   });
+
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [message, setMessage] = useState<{
+    text: string;
+    type: "success" | "error";
+  } | null>(null);
   const [forwarderFile, setForwarderFile] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!fileName || fileName === "new") return;
+    if (isNew) return;
     const fetchGame = async () => {
       setLoading(true);
       try {
-        const res = await fetch("http://localhost:3002/api/games");
+        const res = await fetch(`${API_URL}/api/games`);
+        if (!res.ok) throw new Error("Erreur de chargement");
         const games: Game[] = await res.json();
         const g = games.find(
           (game) =>
             `${game.title
               .toLowerCase()
               .replace(/[^a-z0-9]+/g, "-")
-              .replace(/^-+|-+$/g, "")}.json` === fileName
+              .replace(/^-+|-+$/g, "")}.json` === fileName,
         );
-        if (g) setGame({ ...g, updated: g.updated });
+        if (g) setGame(g);
       } catch (err) {
         console.error(err);
+        setMessage({ text: "Erreur lors du chargement du jeu", type: "error" });
       } finally {
         setLoading(false);
       }
     };
     fetchGame();
-  }, [fileName]);
+  }, [fileName, isNew]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -105,7 +124,7 @@ export default function EditGameForm() {
     try {
       const formData = new FormData();
       formData.append(field, file);
-      const res = await fetch(`http://localhost:3002/api/upload/${endpoint}`, {
+      const res = await fetch(`${API_URL}/api/upload/${endpoint}`, {
         method: "POST",
         body: formData,
       });
@@ -113,239 +132,304 @@ export default function EditGameForm() {
       return await res.json();
     } catch (err) {
       console.error(err);
-      setError(`Erreur upload ${endpoint}: ${err}`);
+      setMessage({ text: `Erreur upload ${endpoint}`, type: "error" });
       return null;
     }
   };
 
   const handleUpload = async (
     type: "icon" | "screenshot" | "nds" | "cia",
-    file: File
+    e: React.ChangeEvent<HTMLInputElement>,
   ) => {
-    const data = await uploadFile(type, file, type);
-    if (!data) return;
-    if (type === "icon") setGame((prev) => ({ ...prev, icon: data.url }));
-    if (type === "screenshot")
+    if (!e.target.files?.length) return;
+    setUploading(true);
+    setMessage(null);
+
+    const files = Array.from(e.target.files);
+
+    for (const file of files) {
+      const data = await uploadFile(type, file, type);
+      if (!data) continue;
+
+      if (type === "icon") {
+        setGame((prev) => ({ ...prev, icon: data.url }));
+      } else if (type === "screenshot") {
+        setGame((prev) => ({
+          ...prev,
+          screenshots: [
+            ...prev.screenshots,
+            { url: data.url, description: "Boxart" },
+          ],
+        }));
+      } else if (type === "nds") {
+        setGame((prev) => ({
+          ...prev,
+          downloads: {
+            ...prev.downloads,
+            [file.name]: { url: data.url },
+          },
+        }));
+      } else if (type === "cia") {
+        setForwarderFile(file.name);
+      }
+    }
+
+    setUploading(false);
+  };
+
+  const removeFile = (type: "screenshot" | "nds", identifier: string) => {
+    if (type === "screenshot") {
       setGame((prev) => ({
         ...prev,
-        screenshots: [
-          ...prev.screenshots,
-          {
-            url: `https://db-nds-shop.fr/assets/images/boxart/${encodeURIComponent(
-              file.name
-            )}`,
-            description: "Boxart",
-          },
-        ],
+        screenshots: prev.screenshots.filter((s) => s.url !== identifier),
       }));
-    if (type === "nds")
-      setGame((prev) => ({
-        ...prev,
-        downloads: {
-          ...prev.downloads,
-          [file.name]: {
-            url: `https://db-nds-shop.fr/games/${encodeURIComponent(
-              file.name
-            )}`,
-          },
-        },
-      }));
-    if (type === "cia") setForwarderFile(file.name);
+    } else if (type === "nds") {
+      setGame((prev) => {
+        const newDownloads = { ...prev.downloads };
+        delete newDownloads[identifier];
+        return { ...prev, downloads: newDownloads };
+      });
+    }
   };
 
   const saveGame = async () => {
+    if (!game.title) {
+      setMessage({ text: "Le titre est obligatoire", type: "error" });
+      return;
+    }
+
     setMessage(null);
-    setError(null);
-    const method = fileName && fileName !== "new" ? "PUT" : "POST";
-    const url =
-      method === "PUT"
-        ? `http://localhost:3002/api/games/${fileName}`
-        : "http://localhost:3002/api/games";
+    const method = isNew ? "POST" : "PUT";
+    const url = isNew
+      ? `${API_URL}/api/games`
+      : `${API_URL}/api/games/${fileName}`;
+
     try {
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(game),
+        body: JSON.stringify({ ...game, updated: formatDate() }),
       });
+
       if (!res.ok) throw new Error(await res.text());
-      setMessage(
-        method === "PUT"
-          ? "Jeu mis à jour avec succès"
-          : "Nouveau jeu créé avec succès"
-      );
-    } catch (err: any) {
+      const data = await res.json();
+
+      setMessage({
+        text: data.message || "Sauvegardé avec succès",
+        type: "success",
+      });
+
+      if (isNew && data.fileName) {
+        setTimeout(
+          () => navigate(`/edit/${data.fileName}`, { replace: true }),
+          1500,
+        );
+      }
+    } catch (err) {
       console.error(err);
-      setError(`Erreur lors de la sauvegarde: ${err.message}`);
+      setMessage({ text: "Erreur lors de la sauvegarde", type: "error" });
     }
   };
 
-  const renderFileInput = (
-    label: string,
-    accept: string,
-    type: "icon" | "screenshot" | "nds" | "cia",
-    multiple = false
-  ) => {
-    const selectedFiles =
-      type === "icon"
-        ? game.icon
-          ? [game.icon.split("/").pop()!]
-          : []
-        : type === "screenshot"
-        ? game.screenshots.map((s) => s.url.split("/").pop()!)
-        : type === "nds"
-        ? Object.keys(game.downloads).filter((n) => n.endsWith(".nds"))
-        : type === "cia"
-        ? forwarderFile
-          ? [forwarderFile]
-          : []
-        : [];
-    return (
-      <div>
-        <Label>{label}</Label>
-        <label className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded cursor-pointer mt-2">
-          Sélectionner
-          <input
-            type="file"
-            accept={accept}
-            multiple={multiple}
-            className="hidden"
-            onChange={(e) => {
-              if (!e.target.files) return;
-              Array.from(e.target.files).forEach((f) => handleUpload(type, f));
-            }}
-          />
-        </label>
-        {selectedFiles.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-2">
-            {selectedFiles.map((f, i) => (
-              <span
-                key={i}
-                className="px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded text-xs"
-              >
-                {f}
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
-    );
+  const getFileItems = (type: "icon" | "screenshot" | "nds" | "cia") => {
+    if (type === "icon" && game.icon)
+      return [{ id: game.icon, display: game.icon.split("/").pop()! }];
+    if (type === "screenshot")
+      return game.screenshots.map((s) => ({
+        id: s.url,
+        display: s.url.split("/").pop()!,
+      }));
+    if (type === "nds")
+      return Object.keys(game.downloads).map((k) => ({ id: k, display: k }));
+    if (type === "cia" && forwarderFile)
+      return [{ id: forwarderFile, display: forwarderFile }];
+    return [];
   };
 
-  if (loading)
+  if (loading) {
     return (
-      <div className="p-6 text-center text-gray-900 dark:text-gray-100">
-        Chargement...
+      <div className="p-8 text-center animate-pulse">
+        Chargement des données du jeu...
       </div>
     );
+  }
 
   return (
-    <div className="p-6 max-w-5xl mx-auto text-gray-900 dark:text-gray-100">
-      <Card className="shadow-xl bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700">
+    <div className="p-4 md:p-8 max-w-4xl mx-auto">
+      <Button
+        variant="ghost"
+        onClick={() => navigate("/")}
+        className="mb-6 gap-2"
+      >
+        <ArrowLeft size={16} /> Retour à la liste
+      </Button>
+
+      <Card>
         <CardHeader>
-          <CardTitle className="text-2xl font-bold">
-            Ajouter / Éditer un jeu
+          <CardTitle className="text-2xl">
+            {isNew ? "Nouveau Jeu" : `Éditer: ${game.title}`}
           </CardTitle>
+          <CardDescription>
+            Remplissez les métadonnées et uploadez les fichiers nécessaires.
+          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="title">Titre</Label>
+
+        <CardContent className="space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="title">Titre du jeu *</Label>
               <Input
                 id="title"
                 name="title"
                 value={game.title}
                 onChange={handleInputChange}
-                className="mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-green-500"
+                placeholder="Ex: Pokémon Version Platine"
+                required
               />
             </div>
-            <div>
-              <Label htmlFor="author">Auteur</Label>
+            <div className="space-y-2">
+              <Label htmlFor="author">Auteur / Éditeur</Label>
               <Input
                 id="author"
                 name="author"
                 value={game.author}
                 onChange={handleInputChange}
-                className="mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-green-500"
-              />
-            </div>
-            <div>
-              <Label>Version</Label>
-              <div className="flex gap-4 mt-2">
-                {availableVersions.map((v) => (
-                  <div key={v} className="flex items-center space-x-2">
-                    <Checkbox
-                      checked={game.version === v}
-                      onCheckedChange={() =>
-                        setGame((prev) => ({ ...prev, version: v }))
-                      }
-                    />
-                    <span>{v}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="updated">Mise à jour</Label>
-              <Input
-                type="datetime-local"
-                id="updated"
-                name="updated"
-                value={game.updated}
-                onChange={handleInputChange}
-                className="mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-green-500"
+                placeholder="Ex: Nintendo"
               />
             </div>
           </div>
 
-          <div>
-            <Label>Catégories</Label>
-            <div className="flex gap-4 mt-2">
+          <div className="space-y-3">
+            <Label className="text-base">Catégories</Label>
+            <div className="flex flex-wrap gap-4">
               {availableCategories.map((c) => (
-                <div key={c} className="flex items-center space-x-2">
+                <div
+                  key={c}
+                  className="flex items-center space-x-2 bg-muted/50 px-3 py-2 rounded-md"
+                >
                   <Checkbox
+                    id={`cat-${c}`}
                     checked={game.categories.includes(c)}
                     onCheckedChange={() => toggleArrayValue("categories", c)}
                   />
-                  <span>{c}</span>
+                  <Label htmlFor={`cat-${c}`} className="cursor-pointer">
+                    {c}
+                  </Label>
                 </div>
               ))}
             </div>
           </div>
 
-          <div>
-            <Label>Systèmes</Label>
-            <div className="flex gap-4 mt-2">
+          <div className="space-y-3">
+            <Label className="text-base">Systèmes compatibles</Label>
+            <div className="flex flex-wrap gap-4">
               {availableSystems.map((s) => (
-                <div key={s} className="flex items-center space-x-2">
+                <div
+                  key={s}
+                  className="flex items-center space-x-2 bg-muted/50 px-3 py-2 rounded-md"
+                >
                   <Checkbox
+                    id={`sys-${s}`}
                     checked={game.systems.includes(s)}
                     onCheckedChange={() => toggleArrayValue("systems", s)}
                   />
-                  <span>{s}</span>
+                  <Label htmlFor={`sys-${s}`} className="cursor-pointer">
+                    {s}
+                  </Label>
                 </div>
               ))}
             </div>
           </div>
 
-          {renderFileInput("Icône", ".png,.jpg,.jpeg", "icon")}
-          {renderFileInput(
-            "Screenshots",
-            ".png,.jpg,.jpeg",
-            "screenshot",
-            true
-          )}
-          {renderFileInput("ROM (.nds)", ".nds", "nds")}
-          {renderFileInput("Forwarder (.cia)", ".cia", "cia")}
+          <div className="space-y-3">
+            <Label className="text-base">Version / Région</Label>
+            <div className="flex flex-wrap gap-4">
+              {availableVersions.map((v) => (
+                <div
+                  key={v}
+                  className="flex items-center space-x-2 bg-muted/50 px-3 py-2 rounded-md"
+                >
+                  <Checkbox
+                    id={`ver-${v}`}
+                    checked={game.version === v}
+                    onCheckedChange={() =>
+                      setGame((prev) => ({ ...prev, version: v }))
+                    }
+                  />
+                  <Label htmlFor={`ver-${v}`} className="cursor-pointer">
+                    {v}
+                  </Label>
+                </div>
+              ))}
+            </div>
+          </div>
 
-          <div className="pt-4 flex flex-col gap-2">
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold border-b pb-2">
+              Fichiers & Assets
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FileUploader
+                label="Icône (1 seul)"
+                accept=".png,.jpg,.jpeg"
+                type="icon"
+                uploading={uploading}
+                items={getFileItems("icon")}
+                onUpload={handleUpload}
+              />
+              <FileUploader
+                label="Screenshots (Multiples)"
+                accept=".png,.jpg,.jpeg"
+                type="screenshot"
+                multiple={true}
+                uploading={uploading}
+                items={getFileItems("screenshot")}
+                onUpload={handleUpload}
+                onRemove={removeFile}
+              />
+              <FileUploader
+                label="ROM du jeu (.nds)"
+                accept=".nds"
+                type="nds"
+                multiple={true}
+                uploading={uploading}
+                items={getFileItems("nds")}
+                onUpload={handleUpload}
+                onRemove={removeFile}
+              />
+              <FileUploader
+                label="Forwarder (.cia)"
+                accept=".cia"
+                type="cia"
+                uploading={uploading}
+                items={getFileItems("cia")}
+                onUpload={handleUpload}
+              />
+            </div>
+          </div>
+
+          <div className="pt-6 border-t flex flex-col items-center gap-4">
+            {message && (
+              <div
+                className={`w-full p-3 rounded-md text-center font-medium ${
+                  message.type === "success"
+                    ? "bg-green-100 text-green-800"
+                    : "bg-destructive/15 text-destructive"
+                }`}
+              >
+                {message.text}
+              </div>
+            )}
+
             <Button
               onClick={saveGame}
-              className="bg-green-600 hover:bg-green-700 text-white"
+              disabled={uploading || !game.title}
+              size="lg"
+              className="w-full md:w-auto min-w-[200px] gap-2"
             >
-              Sauvegarder
+              <Save size={18} />
+              {isNew ? "Créer le jeu" : "Mettre à jour"}
             </Button>
-            {message && <p className="text-green-400">{message}</p>}
-            {error && <p className="text-red-400">{error}</p>}
           </div>
         </CardContent>
       </Card>

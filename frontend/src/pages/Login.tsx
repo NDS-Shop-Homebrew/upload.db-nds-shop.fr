@@ -16,11 +16,23 @@ export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const success = login(username, password);
-    if (!success) setError("❌ Identifiants incorrects");
+    setError("");
+    setIsLoading(true);
+
+    try {
+      const success = await login(username, password);
+      if (!success) {
+        setError("Identifiants incorrects");
+      }
+    } catch (err) {
+      setError("Erreur de connexion au serveur");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -48,6 +60,7 @@ export default function Login() {
                 placeholder="Identifiant"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
+                disabled={isLoading}
                 className="bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-green-500"
               />
               <Input
@@ -55,6 +68,7 @@ export default function Login() {
                 placeholder="Mot de passe"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                disabled={isLoading}
                 className="bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-green-500"
               />
 
@@ -66,16 +80,16 @@ export default function Login() {
 
               <Button
                 type="submit"
+                disabled={isLoading || !username || !password}
                 className="w-full bg-green-600 hover:bg-green-700 font-semibold text-white shadow-lg"
               >
-                Se connecter
+                {isLoading ? "Connexion en cours..." : "Se connecter"}
               </Button>
             </form>
           </CardContent>
         </Card>
       </motion.div>
 
-      {/* Dark Mode Toggle avec espacement suffisant */}
       <div className="absolute bottom-8 right-8">
         <DarkModeToggle />
       </div>
