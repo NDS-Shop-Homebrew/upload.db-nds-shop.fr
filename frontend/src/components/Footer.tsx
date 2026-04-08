@@ -8,7 +8,7 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 px-6">
         <div className="flex flex-col items-center md:items-start">
           <span className="text-2xl font-bold tracking-tight select-none text-gray-900 dark:text-white">
-            NDS-Shop
+            Upload NDS-Shop
           </span>
           <span className="text-sm mt-1 select-none text-gray-600 dark:text-gray-400">
             &copy; {new Date().getFullYear()} NDS-Shop. Tout droits réservés.

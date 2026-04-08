@@ -34,7 +34,7 @@ export function NavBar() {
           className="flex items-center gap-2 text-2xl font-bold tracking-tight"
         >
           <img src="/favicon.ico" alt="NDS-Shop Logo" className="w-8 h-8" />
-          <span>NDS-Shop</span>
+          <span>Upload NDS-Shop</span>
         </Link>
 
         <NavigationMenu>
@@ -42,11 +42,6 @@ export function NavBar() {
             <NavigationMenuItem>
               <NavigationMenuLink asChild>
                 <Link to="/">Accueil</Link>
-              </NavigationMenuLink>
-            </NavigationMenuItem>
-            <NavigationMenuItem>
-              <NavigationMenuLink asChild>
-                <Link to="/about">A Propos</Link>
               </NavigationMenuLink>
             </NavigationMenuItem>
             <NavigationMenuItem>
@@ -90,13 +85,6 @@ export function NavBar() {
           className="w-full font-medium py-2"
         >
           Accueil
-        </Link>
-        <Link
-          to="/about"
-          onClick={() => setMenuOpen(false)}
-          className="w-full font-medium py-2"
-        >
-          A Propos
         </Link>
         {isAuthenticated && (
           <Button
