@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "ts-node server.ts"
+    "dev": "ts-node src/server.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
