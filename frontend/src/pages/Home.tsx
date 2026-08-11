@@ -17,7 +17,8 @@ import {
   SelectValue,
 } from "../components/ui/select";
 import { Link } from "react-router-dom";
-import { Search, Plus, Edit, Rocket } from "lucide-react";
+import { Search, Plus, Edit } from "lucide-react";
+import BuildStatus from "../components/BuildStatus";
 
 interface Game {
   title: string;
@@ -38,30 +39,6 @@ export default function Home() {
   const [sortKey, setSortKey] = useState<SortKey>("updated");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [isLoading, setIsLoading] = useState(true);
-  const [building, setBuilding] = useState(false);
-  const [buildMsg, setBuildMsg] = useState<string | null>(null);
-
-  const triggerBuild = async () => {
-    setBuilding(true);
-    setBuildMsg(null);
-    try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(`${API_URL}/api/build`, {
-        method: "POST",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      const data = await res.json();
-      setBuildMsg(
-        res.ok
-          ? "Build déclenché sur GitHub"
-          : data.error || "Échec du déclenchement",
-      );
-    } catch {
-      setBuildMsg("Erreur réseau");
-    } finally {
-      setBuilding(false);
-    }
-  };
 
   const fetchGames = async () => {
     setIsLoading(true);
@@ -134,20 +111,7 @@ export default function Home() {
         </Link>
       </div>
 
-      <div className="flex items-center justify-end gap-2">
-        <Button
-          variant="outline"
-          onClick={triggerBuild}
-          disabled={building}
-          className="gap-2"
-        >
-          <Rocket size={16} />
-          {building ? "Déclenchement..." : "Déclencher le build"}
-        </Button>
-        {buildMsg && (
-          <span className="text-sm text-muted-foreground">{buildMsg}</span>
-        )}
-      </div>
+      <BuildStatus onTriggered={() => fetchGames()} />
 
       <div className="flex flex-col md:flex-row items-center gap-4 bg-card p-4 rounded-lg border shadow-sm">
         <div className="relative flex-1 w-full">
