@@ -1,82 +1,49 @@
 import express from "express";
+import { execSync } from "child_process";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 import { requireAuth } from "../middleware/auth.ts";
 
 const router = express.Router();
 
-const GITHUB_REPO = process.env.GITHUB_REPO || "NDS-Shop-Homebrew/db-nds-shop";
-const GITHUB_REF = process.env.GITHUB_REF || "refs/heads/dev";
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN || "";
+const BUILD_SCRIPT = process.env.BUILD_SCRIPT || "/usr/local/bin/nds-build.sh";
+const BUILD_LOG = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../../build.log"
+);
 
-const gh = async (path: string) => {
-  const r = await fetch(`https://api.github.com/repos/${GITHUB_REPO}${path}`, {
-    headers: {
-      Authorization: `Bearer ${GITHUB_TOKEN}`,
-      "User-Agent": "upload-backend",
-      Accept: "application/vnd.github+json",
-    },
-  });
-  if (!r.ok) throw new Error(`GitHub ${r.status}: ${r.statusText}`);
-  return r.json();
-};
-
-router.post("/", requireAuth, async (req, res) => {
-  if (!GITHUB_TOKEN)
-    return res.status(500).json({ error: "GITHUB_TOKEN non configuré" });
+router.post("/", requireAuth, (req, res) => {
   try {
-    const r = await fetch(
-      `https://api.github.com/repos/${GITHUB_REPO}/actions/workflows/update.yml/dispatches`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${GITHUB_TOKEN}`,
-          "User-Agent": "upload-backend",
-        },
-        body: JSON.stringify({ ref: GITHUB_REF }),
-      },
-    );
-    if (!r.ok)
-      return res.status(r.status).json({ error: `GitHub: ${r.statusText}` });
-    res.json({ message: "Build déclenché" });
+    const output = execSync(`"${BUILD_SCRIPT}" 2>&1`, {
+      timeout: 600000,
+      maxBuffer: 10 * 1024 * 1024,
+    }).toString();
+    const log = `[${new Date().toISOString()}] SUCCESS\n${output}`;
+    fs.writeFileSync(BUILD_LOG, log);
+    res.json({ message: "Build terminé", output: output.split("\n").filter(Boolean).slice(-10) });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    const log = `[${new Date().toISOString()}] FAILED\n${err.stderr?.toString() || err.stdout?.toString() || err.message}`;
+    try { fs.writeFileSync(BUILD_LOG, log); } catch {}
+    res.status(500).json({ error: log.slice(0, 500) });
   }
 });
 
-router.get("/status", requireAuth, async (req, res) => {
+router.get("/status", requireAuth, (req, res) => {
   try {
-    const runs: any = await gh(
-      `/actions/workflows/update.yml/runs?per_page=1`,
-    );
-    const run = runs.workflow_runs?.[0];
-    if (!run) return res.json({ status: "none" });
-
-    let jobs: any = null;
-    let logs: string | null = null;
-    if (run.status === "completed" || run.status === "in_progress") {
-      const j: any = await gh(`/actions/runs/${run.id}/jobs`);
-      jobs = j.jobs || [];
-    }
-
-    const summary = {
-      id: run.id,
-      status: run.status,
-      conclusion: run.conclusion,
-      html_url: run.html_url,
-      created_at: run.created_at,
-      updated_at: run.updated_at,
-      jobs: jobs?.map((job: any) => ({
-        id: job.id,
-        name: job.name,
-        status: job.status,
-        conclusion: job.conclusion,
-        steps: job.steps?.map((s: any) => ({
-          name: s.name,
-          status: s.status,
-          conclusion: s.conclusion,
-        })),
-      })),
-    };
-    res.json(summary);
+    if (!fs.existsSync(BUILD_LOG)) return res.json({ status: "none" });
+    const content = fs.readFileSync(BUILD_LOG, "utf-8");
+    const lines = content.split("\n");
+    const header = lines[0] || "";
+    const tail = lines.slice(-10).join("\n");
+    const isSuccess = header.includes("SUCCESS");
+    const isFailed = header.includes("FAILED");
+    res.json({
+      status: isSuccess ? "completed" : isFailed ? "failed" : "unknown",
+      conclusion: isSuccess ? "success" : isFailed ? "failure" : null,
+      log: tail,
+      updated_at: header.match(/\[(.*?)\]/)?.[1] || null,
+    });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

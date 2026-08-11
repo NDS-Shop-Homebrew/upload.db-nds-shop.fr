@@ -21,10 +21,42 @@ const createStorage = (dest: string) =>
   });
 
 const upload = {
-  icon: multer({ storage: createStorage(PATHS.ICONS) }),
-  screenshot: multer({ storage: createStorage(PATHS.SCREENSHOTS) }),
-  nds: multer({ storage: createStorage(PATHS.ROMS) }),
-  cia: multer({ storage: createStorage(PATHS.FORWARDER) }),
+  icon: multer({
+    storage: createStorage(PATHS.ICONS),
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (_r, f, cb) => {
+      if (!f.mimetype.startsWith("image/"))
+        return cb(new Error("Fichier image attendu") as any, false);
+      cb(null, true);
+    },
+  }),
+  screenshot: multer({
+    storage: createStorage(PATHS.SCREENSHOTS),
+    limits: { fileSize: 20 * 1024 * 1024 },
+    fileFilter: (_r, f, cb) => {
+      if (!f.mimetype.startsWith("image/"))
+        return cb(new Error("Fichier image attendu") as any, false);
+      cb(null, true);
+    },
+  }),
+  nds: multer({
+    storage: createStorage(PATHS.ROMS),
+    limits: { fileSize: 512 * 1024 * 1024 },
+    fileFilter: (_r, f, cb) => {
+      if (!f.originalname.match(/\.nds$/i))
+        return cb(new Error("Seuls les fichiers .nds sont acceptés") as any, false);
+      cb(null, true);
+    },
+  }),
+  cia: multer({
+    storage: createStorage(PATHS.FORWARDER),
+    limits: { fileSize: 512 * 1024 * 1024 },
+    fileFilter: (_r, f, cb) => {
+      if (!f.originalname.match(/\.cia$/i))
+        return cb(new Error("Seuls les fichiers .cia sont acceptés") as any, false);
+      cb(null, true);
+    },
+  }),
 };
 
 router.post("/icon", upload.icon.single("icon"), (req, res) => {

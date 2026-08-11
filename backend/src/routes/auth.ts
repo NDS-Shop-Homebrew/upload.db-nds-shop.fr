@@ -1,12 +1,21 @@
 import express from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import rateLimit from "express-rate-limit";
 import prisma from "../lib/prisma.ts";
 
 const router = express.Router();
 const SECRET = process.env.JWT_SECRET || "super-secret";
 
-router.post("/login", async (req, res) => {
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Trop de tentatives, réessayez dans 15 minutes" },
+});
+
+router.post("/login", loginLimiter, async (req, res) => {
   const { username, password } = req.body;
 
   const user = await prisma.user.findUnique({ where: { username } });
