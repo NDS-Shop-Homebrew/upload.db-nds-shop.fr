@@ -23,6 +23,7 @@ interface Downloads {
 }
 interface Game {
   title: string;
+  titleId?: string;
   author: string;
   categories: string[];
   systems: string[];
@@ -43,6 +44,11 @@ const availableVersions = [
 ];
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3002";
+
+const authHeaders = (): Record<string, string> => {
+  const token = localStorage.getItem("token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
 
 const formatDate = () => {
   const d = new Date();
@@ -71,11 +77,42 @@ export default function EditGameForm() {
 
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
   const [message, setMessage] = useState<{
     text: string;
     type: "success" | "error";
   } | null>(null);
   const [forwarderFile, setForwarderFile] = useState<string | null>(null);
+
+  const analyzeNds = async (file: File) => {
+    setAnalyzing(true);
+    try {
+      const formData = new FormData();
+      formData.append("nds", file);
+      const res = await fetch(`${API_URL}/api/analyze/nds`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: formData,
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const meta = await res.json();
+      const title = meta.title?.split("\n")[0] || "";
+      setGame((prev) => ({
+        ...prev,
+        title: prev.title || title,
+        titleId: meta.titleId || prev.titleId,
+      }));
+      if (meta.titleId)
+        setMessage({
+          text: `ROM analysée: ${title} (${meta.titleId})`,
+          type: "success",
+        });
+    } catch (err) {
+      setMessage({ text: "Analyse ROM impossible", type: "error" });
+    } finally {
+      setAnalyzing(false);
+    }
+  };
 
   useEffect(() => {
     if (isNew) return;
@@ -126,6 +163,7 @@ export default function EditGameForm() {
       formData.append(field, file);
       const res = await fetch(`${API_URL}/api/upload/${endpoint}`, {
         method: "POST",
+        headers: authHeaders(),
         body: formData,
       });
       if (!res.ok) throw new Error(await res.text());
@@ -148,6 +186,8 @@ export default function EditGameForm() {
     const files = Array.from(e.target.files);
 
     for (const file of files) {
+      if (type === "nds" && isNew) await analyzeNds(file);
+
       const data = await uploadFile(type, file, type);
       if (!data) continue;
 
@@ -207,10 +247,26 @@ export default function EditGameForm() {
     try {
       const res = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeaders(),
+        },
         body: JSON.stringify({ ...game, updated: formatDate() }),
       });
 
+      if (res.status === 409) {
+        const data = await res.json();
+        setMessage({
+          text: `Ce jeu existe déjà (${data.fileName}).`,
+          type: "error",
+        });
+        if (data.fileName)
+          setTimeout(
+            () => navigate(`/edit/${data.fileName}`, { replace: true }),
+            2000,
+          );
+        return;
+      }
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
 
@@ -297,6 +353,18 @@ export default function EditGameForm() {
                 placeholder="Ex: Nintendo"
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="titleId">Title ID (auto-rempli par l'analyse ROM)</Label>
+            <Input
+              id="titleId"
+              name="titleId"
+              value={game.titleId || ""}
+              onChange={handleInputChange}
+              placeholder="Ex: ABXP"
+              className="font-mono uppercase"
+            />
           </div>
 
           <div className="space-y-3">
@@ -392,7 +460,7 @@ export default function EditGameForm() {
                 accept=".nds"
                 type="nds"
                 multiple={true}
-                uploading={uploading}
+                uploading={uploading || analyzing}
                 items={getFileItems("nds")}
                 onUpload={handleUpload}
                 onRemove={removeFile}

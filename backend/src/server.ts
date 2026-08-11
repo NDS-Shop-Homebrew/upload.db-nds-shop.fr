@@ -6,6 +6,8 @@ import morgan from "morgan";
 import authRoutes from "./routes/auth.ts";
 import uploadRoutes from "./routes/uploads.ts";
 import gameRoutes from "./routes/games.ts";
+import analyzeRoutes from "./routes/analyze.ts";
+import buildRoutes from "./routes/build.ts";
 
 dotenv.config();
 
@@ -19,6 +21,8 @@ app.use(morgan("dev"));
 app.use("/api/auth", authRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/games", gameRoutes);
+app.use("/api/analyze", analyzeRoutes);
+app.use("/api/build", buildRoutes);
 
 app.listen(PORT, () => {
   console.log(`✅ Serveur démarré sur http://localhost:${PORT}`);

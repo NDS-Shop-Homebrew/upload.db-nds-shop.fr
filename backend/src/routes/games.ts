@@ -1,10 +1,13 @@
 import express from "express";
 import fs from "fs";
 import path from "path";
+import { execSync } from "child_process";
+import { requireAuth } from "../middleware/auth.ts";
 
 const router = express.Router();
 const GAMES_PATH = process.env.GAMES_PATH!;
 const FORWARDER_PATH = process.env.FORWARDER_PATH!;
+const GIT_REPO_PATH = process.env.GIT_REPO_PATH || "";
 
 const formatDate = () =>
   new Date().toISOString().replace(/\.\d{3}Z$/, "+02:00");
@@ -43,6 +46,26 @@ const generateScripts = (downloads: any, screenshots: any[] = []) => {
   return scripts;
 };
 
+const findExistingByTitleId = (titleId?: string) => {
+  if (!titleId) return null;
+  const files = fs.readdirSync(GAMES_PATH).filter((f) => f.endsWith(".json"));
+  for (const file of files) {
+    try {
+      const g = JSON.parse(fs.readFileSync(path.join(GAMES_PATH, file), "utf-8"));
+      if (g.titleId === titleId) return { file, game: g };
+    } catch {}
+  }
+  return null;
+};
+
+const gitPush = (message: string) => {
+  if (!GIT_REPO_PATH) return;
+  const repo = GIT_REPO_PATH;
+  execSync("git add -A", { cwd: repo });
+  execSync(`git commit -m "${message.replace(/"/g, "'")}" || true`, { cwd: repo });
+  execSync("git push", { cwd: repo, stdio: "pipe" });
+};
+
 router.get("/", (req, res) => {
   try {
     const files = fs.readdirSync(GAMES_PATH).filter((f) => f.endsWith(".json"));
@@ -55,9 +78,17 @@ router.get("/", (req, res) => {
   }
 });
 
-router.post("/", (req, res) => {
-  const { title, downloads, screenshots } = req.body;
+router.post("/", requireAuth, (req, res) => {
+  const { title, titleId, downloads, screenshots } = req.body;
   if (!title) return res.status(400).json({ error: "Titre requis" });
+
+  const existing = findExistingByTitleId(titleId);
+  if (existing)
+    return res.status(409).json({
+      error: "Ce jeu existe déjà",
+      fileName: existing.file,
+      game: existing.game,
+    });
 
   const fileName = `${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.json`;
   const filePath = path.join(GAMES_PATH, fileName);
@@ -69,10 +100,17 @@ router.post("/", (req, res) => {
   };
 
   fs.writeFileSync(filePath, JSON.stringify(gameData, null, 2));
+  try {
+    gitPush(`add ${fileName}`);
+  } catch {
+    return res
+      .status(500)
+      .json({ message: "Jeu créé localement mais échec du push git", fileName });
+  }
   res.json({ message: "Jeu créé !", fileName });
 });
 
-router.put("/:filename", (req, res) => {
+router.put("/:filename", requireAuth, (req, res) => {
   const { filename } = req.params;
   const filePath = path.join(GAMES_PATH, filename);
   if (!fs.existsSync(filePath))
@@ -88,6 +126,13 @@ router.put("/:filename", (req, res) => {
   };
 
   fs.writeFileSync(filePath, JSON.stringify(gameData, null, 2));
+  try {
+    gitPush(`update ${filename}`);
+  } catch {
+    return res
+      .status(500)
+      .json({ message: "Jeu mis à jour mais échec du push git" });
+  }
   res.json({ message: "Jeu mis à jour !" });
 });
 
