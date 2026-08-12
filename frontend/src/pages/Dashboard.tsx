@@ -89,6 +89,19 @@ export default function Dashboard() {
     setMsg(error ? { text: error.message || "Erreur", ok: false } : { text: "Mot de passe mis à jour", ok: true });
   };
 
+  const editUser = async (u: AdminUser) => {
+    const name = prompt("Nom complet :", u.name || "");
+    if (name === null) return;
+    const email = prompt("Email :", u.email);
+    if (email === null) return;
+    const { error } = await (authClient.admin.updateUser as any)({
+      userId: u.id,
+      data: { name, email },
+    });
+    setMsg(error ? { text: error.message || "Erreur", ok: false } : { text: "Infos mises à jour", ok: true });
+    load();
+  };
+
   const banUser = async (userId: string, banned: boolean) => {
     if (banned) await authClient.admin.unbanUser({ userId });
     else await authClient.admin.banUser({ userId });
@@ -219,7 +232,10 @@ export default function Dashboard() {
                     <tr key={u.id} className="border-b border-border/50">
                       <td className="p-2 font-medium flex items-center gap-2">
                         {u.role === "super-admin" ? <Shield size={14} className="text-primary" /> : <UserIcon size={14} className="text-muted-foreground" />}
-                        {u.username}
+                        <span>{u.username}</span>
+                        {u.name && u.name !== u.username && (
+                          <span className="text-muted-foreground font-normal text-xs">({u.name})</span>
+                        )}
                       </td>
                       <td className="p-2 hidden md:table-cell text-muted-foreground">{u.email}</td>
                       <td className="p-2">
@@ -237,7 +253,8 @@ export default function Dashboard() {
                       <td className="p-2">
                         <Badge variant={u.banned ? "destructive" : "outline"}>{u.banned ? "Banni" : "Actif"}</Badge>
                       </td>
-                      <td className="p-2 text-right space-x-1">
+                      <td className="p-2 text-right space-x-1 whitespace-nowrap">
+                        <Button size="sm" variant="outline" onClick={() => editUser(u)}>Éditer</Button>
                         {u.role !== "super-admin" && (
                           <>
                             <Button size="sm" variant="outline" onClick={() => setPassword(u.id)}>MDP</Button>

@@ -67,12 +67,18 @@ router.post("/", requireAuth, (req, res) => {
     state.running = false;
     state.status = "failed";
     state.finishedAt = new Date().toISOString();
+    fs.writeFileSync(BUILD_LOG, `[${state.finishedAt}] FAILED\n` + state.log);
   });
 
   child.on("close", (code) => {
     state.running = false;
     state.status = code === 0 ? "success" : "failed";
     state.finishedAt = new Date().toISOString();
+    // Préfixe [date] SUCCESS/FAILED pour que admin.ts détecte le statut
+    fs.writeFileSync(
+      BUILD_LOG,
+      `[${state.finishedAt}] ${code === 0 ? "SUCCESS" : "FAILED"}\n` + state.log
+    );
   });
 
   res.json({ message: "Build lancé en arrière-plan" });
