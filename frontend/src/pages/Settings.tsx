@@ -10,7 +10,6 @@ import { authClient } from "../lib/auth-client";
 export default function Settings() {
   const { user } = useAuth();
   const [name, setName] = useState(user?.username || "");
-  const [email, setEmail] = useState(user?.email || "");
   const [currentPwd, setCurrentPwd] = useState("");
   const [newPwd, setNewPwd] = useState("");
   const [confirmPwd, setConfirmPwd] = useState("");
@@ -18,7 +17,7 @@ export default function Settings() {
 
   const updateProfile = async () => {
     setMsg(null);
-    const { error } = await (authClient.updateUser as any)({ name, email });
+    const { error } = await authClient.updateUser({ name });
     setMsg(error ? { text: error.message || "Erreur", ok: false } : { text: "Profil mis à jour", ok: true });
   };
 
@@ -63,7 +62,8 @@ export default function Settings() {
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="email" className="flex items-center gap-1.5"><Mail size={14} /> Email</Label>
-            <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <Input id="email" type="email" value={user?.email || ""} disabled className="bg-muted/50" />
+            <p className="text-xs text-muted-foreground">L'email est fixé et ne peut pas être modifié (sécurité).</p>
           </div>
           <Button onClick={updateProfile}>Enregistrer le profil</Button>
         </CardContent>

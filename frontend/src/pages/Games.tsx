@@ -34,7 +34,7 @@ function CompletionBadge({ ok, label }: { ok: boolean; label: string }) {
   );
 }
 
-export default function Home() {
+export default function Games() {
   const [games, setGames] = useState<Game[]>([]);
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("updated");
@@ -55,7 +55,7 @@ export default function Home() {
       }));
       setGames(gamesWithFileName);
     } catch (err) {
-      console.error("Erreur rÃ©cupÃ©ration jeux :", err);
+      console.error("Erreur récupération jeux :", err);
     } finally {
       setIsLoading(false);
     }
@@ -90,8 +90,8 @@ export default function Home() {
     <div className="p-6 md:p-8 w-full max-w-7xl mx-auto space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">BibliothÃ¨que de jeux</h1>
-          <p className="text-muted-foreground text-sm">GÃ©rez vos fichiers JSON et mÃ©tadonnÃ©es.</p>
+          <h1 className="text-2xl font-bold tracking-tight">Bibliothèque de jeux</h1>
+          <p className="text-muted-foreground text-sm">Gérez vos fichiers JSON et métadonnées.</p>
         </div>
         <Link to="/edit/new">
           <Button className="gap-2">
@@ -99,8 +99,6 @@ export default function Home() {
           </Button>
         </Link>
       </div>
-
-      
 
       <div className="flex flex-col md:flex-row items-center gap-4 bg-card p-4 rounded-lg border shadow-sm">
         <div className="relative flex-1 w-full">
@@ -120,7 +118,7 @@ export default function Home() {
             <SelectContent>
               <SelectItem value="title">Titre</SelectItem>
               <SelectItem value="author">Auteur</SelectItem>
-              <SelectItem value="updated">Mise Ã  jour</SelectItem>
+              <SelectItem value="updated">Mise à jour</SelectItem>
             </SelectContent>
           </Select>
           <Select value={sortOrder} onValueChange={(v) => setSortOrder(v as SortOrder)}>
@@ -129,7 +127,7 @@ export default function Home() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="asc">Croissant</SelectItem>
-              <SelectItem value="desc">DÃ©croissant</SelectItem>
+              <SelectItem value="desc">Décroissant</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -164,7 +162,7 @@ export default function Home() {
                 <h3 className="font-semibold text-sm line-clamp-2 leading-snug">{game.title}</h3>
                 <p className="text-xs text-muted-foreground mt-1 truncate">{game.author}</p>
                 <div className="flex flex-wrap gap-1.5 mt-2.5">
-                  <CompletionBadge ok={!!game.icon} label="IcÃ´ne" />
+                  <CompletionBadge ok={!!game.icon} label="Icône" />
                   <CompletionBadge ok={!!game.titleId} label="TitleID" />
                   <CompletionBadge ok={!!hasBoxart} label="Boxart" />
                   <CompletionBadge ok={!!hasShot} label="Screens" />
@@ -185,7 +183,7 @@ export default function Home() {
         </div>
       ) : (
         <div className="rounded-xl border border-border bg-card p-10 text-center text-muted-foreground">
-          Aucun jeu trouvÃ©.
+          Aucun jeu trouvé.
         </div>
       )}
     </div>

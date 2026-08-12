@@ -3,7 +3,7 @@ import { useAuth } from "../context/AuthContext";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { motion } from "framer-motion";
-import { Gamepad2, LogIn, ShieldCheck, Sparkles, Lock } from "lucide-react";
+import { LogIn, ShieldCheck, Lock, LayoutDashboard, Hammer, Sparkles } from "lucide-react";
 
 export default function Login() {
   const { login } = useAuth();
@@ -27,64 +27,71 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex bg-background">
+    <div className="min-h-screen flex bg-[#0F172A]">
       {/* Panneau gauche — branding */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden dsi-gradient">
-        <div className="absolute inset-0 opacity-20 [background-image:radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] [background-size:32px_32px]" />
-        <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-white/10 blur-3xl" />
-        <div className="absolute top-16 -left-20 w-72 h-72 rounded-full bg-black/10 blur-3xl" />
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-[#0072CE] via-[#0F5CA8] to-[#00A651]">
+        <div className="absolute inset-0 opacity-15 [background-image:radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] [background-size:28px_28px]" />
+        <div className="absolute -bottom-40 -right-40 w-[28rem] h-[28rem] rounded-full bg-white/10 blur-3xl" />
+        <div className="absolute top-20 -left-24 w-80 h-80 rounded-full bg-black/15 blur-3xl" />
 
         <div className="relative z-10 flex flex-col justify-between p-12 w-full">
           <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="NDS-Shop" className="w-10 h-10 rounded-xl bg-white/20" />
-            <span className="text-xl font-bold text-white tracking-tight">NDS-Shop</span>
+            <div className="w-11 h-11 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center shadow-lg">
+              <img src="/logo.png" alt="NDS-Shop" className="w-8 h-8 rounded-lg" />
+            </div>
+            <div>
+              <span className="text-lg font-bold text-white tracking-tight">NDS-Shop</span>
+              <p className="text-[11px] text-white/60">Back-office</p>
+            </div>
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-8">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
             >
-              <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center mb-6">
-                <ShieldCheck className="w-8 h-8 text-white" />
+              <div className="w-14 h-14 rounded-2xl bg-white/15 backdrop-blur flex items-center justify-center mb-5 shadow-lg">
+                <ShieldCheck className="w-7 h-7 text-white" />
               </div>
               <h2 className="text-3xl font-bold text-white leading-tight">
-                Espace<br />Administrateur
+                Administration
+                <br />
+                NDS-Shop
               </h2>
-              <p className="mt-3 text-white/80 max-w-sm">
-                Gérez la bibliothèque, lancez les builds et suivez la génération du site en temps réel.
+              <p className="mt-3 text-white/75 max-w-sm leading-relaxed">
+                Gérez la bibliothèque de jeux, les comptes de l'équipe et lancez les builds du site en toute sécurité.
               </p>
             </motion.div>
 
-            <div className="flex flex-wrap gap-6 pt-4">
+            <div className="space-y-3">
               {[
-                { icon: Sparkles, label: "Métadonnées" },
-                { icon: Gamepad2, label: "55 jeux" },
-                { icon: Lock, label: "Accès privé" },
+                { icon: LayoutDashboard, label: "Dashboard & statistiques" },
+                { icon: Hammer, label: "Build du site en temps réel" },
+                { icon: Lock, label: "Accès privé réservé à l'équipe" },
               ].map((item, i) => (
                 <motion.div
                   key={item.label}
-                  initial={{ opacity: 0, x: -10 }}
+                  initial={{ opacity: 0, x: -12 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.3 + i * 0.1 }}
-                  className="flex items-center gap-2 text-white/85"
+                  transition={{ delay: 0.25 + i * 0.1 }}
+                  className="flex items-center gap-3 text-white/85 bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 backdrop-blur"
                 >
-                  <item.icon size={16} />
+                  <item.icon size={16} className="text-white/70" />
                   <span className="text-sm">{item.label}</span>
                 </motion.div>
               ))}
             </div>
           </div>
 
-          <p className="text-white/50 text-xs">
-            © {new Date().getFullYear()} NDS-Shop · Back-office
+          <p className="text-white/40 text-xs">
+            © {new Date().getFullYear()} NDS-Shop · Back-office · Accès réservé
           </p>
         </div>
       </div>
 
       {/* Panneau droit — formulaire */}
-      <div className="flex-1 flex items-center justify-center p-6">
+      <div className="flex-1 flex items-center justify-center p-6 bg-muted/30">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -97,9 +104,12 @@ export default function Login() {
             <span className="text-xl font-bold tracking-tight">NDS-Shop</span>
           </div>
 
-          <div className="space-y-6">
-            <div>
-              <h1 className="text-2xl font-bold">Bon retour 👋</h1>
+          <div className="bg-card border border-border rounded-2xl shadow-sm p-8">
+            <div className="mb-6">
+              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
+                <Lock className="w-6 h-6 text-primary" />
+              </div>
+              <h1 className="text-xl font-bold">Connexion</h1>
               <p className="text-sm text-muted-foreground mt-1">
                 Connectez-vous pour accéder au back-office.
               </p>
@@ -166,11 +176,11 @@ export default function Login() {
                 )}
               </Button>
             </form>
-
-            <p className="text-xs text-muted-foreground text-center">
-              Accès réservé à l'équipe NDS-Shop.
-            </p>
           </div>
+
+          <p className="text-xs text-muted-foreground text-center mt-6 flex items-center justify-center gap-1.5">
+            <Sparkles size={12} /> Accès réservé à l'équipe NDS-Shop
+          </p>
         </motion.div>
       </div>
     </div>
