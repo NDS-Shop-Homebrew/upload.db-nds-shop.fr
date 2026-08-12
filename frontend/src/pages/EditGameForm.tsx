@@ -129,7 +129,12 @@ export default function EditGameForm() {
               .replace(/[^a-z0-9]+/g, "-")
               .replace(/^-+|-+$/g, "")}.json` === fileName,
         );
-        if (g) setGame(g);
+        if (g) {
+          setGame(g);
+          // Déduit le forwarder .cia depuis la première ROM .nds
+          const ndsName = Object.keys(g.downloads || {}).find((k) => /\.nds$/i.test(k));
+          if (ndsName) setForwarderFile(ndsName.replace(/\.nds$/i, ".cia"));
+        }
       } catch (err) {
         console.error(err);
         setMessage({ text: "Erreur lors du chargement du jeu", type: "error" });
@@ -209,6 +214,9 @@ export default function EditGameForm() {
             [file.name]: { url: data.url },
           },
         }));
+        // Le forwarder .cia a le même nom que le .nds (généré par le build)
+        const ciaName = file.name.replace(/\.nds$/i, ".cia");
+        setForwarderFile(ciaName);
       } else if (type === "cia") {
         setForwarderFile(file.name);
       }
