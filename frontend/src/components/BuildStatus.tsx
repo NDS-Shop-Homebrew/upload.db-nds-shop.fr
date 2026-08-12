@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { Button } from "../components/ui/button";
 import { CheckCircle2, XCircle, Loader2, RefreshCw, Rocket } from "lucide-react";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3002";
+const API_URL = import.meta.env.VITE_API_URL || "";
 
 interface BuildStatusData {
   status: string;

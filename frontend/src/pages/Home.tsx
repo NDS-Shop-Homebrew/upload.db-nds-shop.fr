@@ -31,7 +31,7 @@ interface Game {
 type SortKey = "title" | "author" | "version" | "updated";
 type SortOrder = "asc" | "desc";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3002";
+const API_URL = import.meta.env.VITE_API_URL || "";
 
 export default function Home() {
   const [games, setGames] = useState<Game[]>([]);
