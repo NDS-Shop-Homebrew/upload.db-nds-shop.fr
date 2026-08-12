@@ -36,9 +36,7 @@ export default function Login() {
 
         <div className="relative z-10 flex flex-col justify-between p-12 w-full">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
-              <Gamepad2 className="w-5 h-5 text-white" />
-            </div>
+            <img src="/logo.png" alt="NDS-Shop" className="w-10 h-10 rounded-xl bg-white/20" />
             <span className="text-xl font-bold text-white tracking-tight">NDS-Shop</span>
           </div>
 
@@ -95,9 +93,7 @@ export default function Login() {
         >
           {/* Logo mobile */}
           <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
-            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-              <Gamepad2 className="w-5 h-5 text-white" />
-            </div>
+            <img src="/logo.png" alt="NDS-Shop" className="w-10 h-10 rounded-xl bg-primary" />
             <span className="text-xl font-bold tracking-tight">NDS-Shop</span>
           </div>
 
