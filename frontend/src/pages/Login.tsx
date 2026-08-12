@@ -17,8 +17,8 @@ export default function Login() {
     setError("");
     setIsLoading(true);
     try {
-      const success = await login(username, password);
-      if (!success) setError("Identifiants incorrects");
+      const result = await login(username, password);
+      if (!result.ok) setError(result.message || "Identifiants incorrects");
     } catch {
       setError("Erreur de connexion au serveur");
     } finally {

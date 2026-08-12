@@ -1,5 +1,5 @@
 import prisma from "../lib/prisma.ts";
-import bcrypt from "bcrypt";
+import { hash } from "bcrypt";
 
 const newPassword = process.env.ADMIN_PASSWORD || process.argv[2];
 
@@ -9,10 +9,16 @@ if (!newPassword) {
   process.exit(1);
 }
 
-const hashed = await bcrypt.hash(newPassword, 10);
-const user = await prisma.user.update({
-  where: { username: "admin" },
+const hashed = await hash(newPassword, 10);
+const user = await prisma.user.findUnique({ where: { username: "admin" } });
+if (!user) {
+  console.error("User admin introuvable — lancez d'abord migrate-auth.ts");
+  process.exit(1);
+}
+
+const account = await prisma.account.updateMany({
+  where: { userId: user.id, providerId: "credential" },
   data: { password: hashed },
 });
-console.log("✅ Mot de passe changé pour :", user.username);
+console.log(`✅ Mot de passe changé pour admin (${account.count} account mis à jour)`);
 await prisma.$disconnect();

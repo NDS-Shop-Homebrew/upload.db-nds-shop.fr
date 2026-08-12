@@ -1,17 +1,20 @@
 import type { Request, Response, NextFunction } from "express";
-import jwt from "jsonwebtoken";
+import { auth } from "../lib/auth.ts";
 
-const SECRET = process.env.JWT_SECRET || "super-secret";
+export async function requireAuth(req: Request, res: Response, next: NextFunction) {
+  const session = await auth.api.getSession({ headers: req.headers as Headers });
+  if (!session) return res.status(401).json({ message: "Non autorisé" });
+  (req as any).user = session.user;
+  (req as any).session = session;
+  next();
+}
 
-export function requireAuth(req: Request, res: Response, next: NextFunction) {
-  const auth = req.headers.authorization;
-  if (!auth) return res.status(401).json({ message: "Non autorisé" });
-  try {
-    const token = auth.split(" ")[1];
-    const decoded: any = jwt.verify(token, SECRET);
-    (req as any).user = decoded;
-    next();
-  } catch {
-    res.status(401).json({ message: "Token invalide" });
-  }
+export async function requireSuperAdmin(req: Request, res: Response, next: NextFunction) {
+  const session = await auth.api.getSession({ headers: req.headers as Headers });
+  if (!session) return res.status(401).json({ message: "Non autorisé" });
+  const role = (session.user as any).role;
+  if (role !== "super-admin") return res.status(403).json({ message: "Accès réservé au super-admin" });
+  (req as any).user = session.user;
+  (req as any).session = session;
+  next();
 }

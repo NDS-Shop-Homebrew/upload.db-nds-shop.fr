@@ -6,8 +6,10 @@
     "dev": "ts-node src/server.ts"
   },
   "dependencies": {
+    "@better-auth/cli": "^1.4.21",
     "@prisma/client": "^6.19.3",
     "bcrypt": "^6.0.0",
+    "better-auth": "^1.6.27",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "express-rate-limit": "^8.6.2",

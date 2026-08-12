@@ -45,6 +45,11 @@ export function NavBar() {
               </NavigationMenuLink>
             </NavigationMenuItem>
             <NavigationMenuItem>
+              <NavigationMenuLink asChild>
+                <Link to="/dashboard">Dashboard</Link>
+              </NavigationMenuLink>
+            </NavigationMenuItem>
+            <NavigationMenuItem>
               <DarkModeToggle />
             </NavigationMenuItem>
             {isAuthenticated && (

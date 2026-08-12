@@ -4,6 +4,7 @@ import Layout from "./components/Layout";
 import NotFound from "./pages/NotFound";
 import EditGameForm from "./pages/EditGameForm";
 import Login from "./pages/Login";
+import Dashboard from "./pages/Dashboard";
 import PrivateRoute from "./components/PrivateRoute";
 import { AuthProvider } from "./context/AuthContext";
 
@@ -23,7 +24,7 @@ export default function App() {
           }
         >
           <Route path="/" element={<Home />} />
-          {/* <Route path="/" element={<About/>} /> */}
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/edit/:fileName" element={<EditGameForm />} />
 
           {/* Route 404 */}

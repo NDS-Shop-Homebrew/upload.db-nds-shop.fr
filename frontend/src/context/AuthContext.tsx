@@ -1,4 +1,4 @@
-import {
+﻿import {
   createContext,
   useContext,
   useState,
@@ -6,81 +6,79 @@ import {
   type ReactNode,
 } from "react";
 import { useNavigate } from "react-router-dom";
+import { authClient } from "../lib/auth-client";
+
+interface SessionUser {
+  id: string;
+  username: string;
+  role: string;
+  email?: string;
+}
 
 interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (username: string, password: string) => Promise<boolean>;
-  logout: () => void;
+  user: SessionUser | null;
+  login: (username: string, password: string) => Promise<{ ok: boolean; message?: string }>;
+  logout: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const toSessionUser = (u: any): SessionUser | null =>
+  u ? { id: u.id, username: u.username ?? "", role: u.role ?? "member", email: u.email } : null;
 
-const API_URL = import.meta.env.VITE_API_URL || "";
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [user, setUser] = useState<AuthContextType["user"]>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const verifyToken = async () => {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        setIsLoading(false);
-        return;
-      }
-
+    const verify = async () => {
       try {
-        const res = await fetch(`${API_URL}/api/auth/me`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (res.ok) {
+        const { data } = await authClient.getSession();
+        if (data?.session && data.user) {
           setIsAuthenticated(true);
+          setUser(toSessionUser(data.user));
         } else {
-          localStorage.removeItem("token");
+          setIsAuthenticated(false);
+          setUser(null);
         }
-      } catch (err) {
-        localStorage.removeItem("token");
+      } catch {
+        setIsAuthenticated(false);
+        setUser(null);
       } finally {
         setIsLoading(false);
       }
     };
-
-    verifyToken();
+    verify();
   }, []);
 
   const login = async (username: string, password: string) => {
-    try {
-      const res = await fetch(`${API_URL}/api/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
-      });
-
-      if (!res.ok) return false;
-
-      const data = await res.json();
-      localStorage.setItem("token", data.token);
+    const { error } = await authClient.signIn.username({
+      username,
+      password,
+    });
+    if (error) return { ok: false, message: error.message || "Identifiants incorrects" };
+    const { data } = await authClient.getSession();
+    if (data?.user) {
       setIsAuthenticated(true);
+      setUser(toSessionUser(data.user));
       navigate("/");
-      return true;
-    } catch (err) {
-      return false;
     }
+    return { ok: true };
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await authClient.signOut();
     setIsAuthenticated(false);
-    localStorage.removeItem("token");
+    setUser(null);
     navigate("/login");
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, isLoading, user, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
