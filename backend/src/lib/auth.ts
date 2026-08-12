@@ -23,16 +23,10 @@ const statement = {
 
 const ac = createAccessControl(statement);
 
-// super-admin : tout (gestion comptes + rôles + ban)
-const superAdmin = ac.newRole({
+// admin : gestion complète (créer, ban, rôles, mot de passe, suppression)
+const adminRole = ac.newRole({
   user: ["create", "list", "set-role", "ban", "impersonate", "delete", "set-password", "get", "update"],
   session: ["list", "revoke", "delete"],
-});
-
-// admin : peut voir la liste et le détail, pas de suppression
-const adminRole = ac.newRole({
-  user: ["list", "get"],
-  session: ["list"],
 });
 
 // member : équipe, accès au back-office sans gestion users
@@ -60,11 +54,10 @@ export const auth = betterAuth({
     admin({
       ac,
       roles: {
-        "super-admin": superAdmin,
         admin: adminRole,
         member,
       },
-      adminRoles: ["super-admin"],
+      adminRoles: ["admin"],
       defaultRole: "member",
     }),
   ],

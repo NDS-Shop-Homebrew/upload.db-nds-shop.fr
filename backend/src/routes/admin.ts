@@ -2,7 +2,7 @@ import express from "express";
 import fs from "fs";
 import path from "path";
 import prisma from "../lib/prisma.ts";
-import { requireSuperAdmin, requireAuth } from "../middleware/auth.ts";
+import { requireAdmin, requireAuth } from "../middleware/auth.ts";
 
 const router = express.Router();
 
@@ -51,7 +51,7 @@ function downloadCounts(days = 30) {
 // GET /api/admin/stats — dashboard complet
 router.get("/stats", requireAuth, async (_req, res) => {
   try {
-    const [users, games, forwarders, screenshots, builds] = await Promise.all([
+    const [users, games, forwarders, screenshots, buildLog] = await Promise.all([
       prisma.user.count(),
       fs.existsSync(GAMES_PATH)
         ? fs.readdirSync(GAMES_PATH).filter((f) => f.endsWith(".json")).length
@@ -62,15 +62,15 @@ router.get("/stats", requireAuth, async (_req, res) => {
       fs.existsSync(SCREENSHOTS_PATH)
         ? fs.readdirSync(SCREENSHOTS_PATH).filter((d) => fs.statSync(path.join(SCREENSHOTS_PATH, d)).isDirectory()).length
         : 0,
-      fs.existsSync(BUILD_LOG)
-        ? fs.readFileSync(BUILD_LOG, "utf8").split("\n").filter((l) => l.trim()).slice(-40)
-        : [],
+      fs.existsSync(BUILD_LOG) ? fs.readFileSync(BUILD_LOG, "utf8") : "",
     ]);
 
-    // Dernier build = dernière ligne [date] SUCCESS/FAILED
-    const lastBuild = builds.filter((l) => l.startsWith("[")).pop() || null;
-    const lastBuildAt = lastBuild ? (lastBuild.match(/\[(.*?)\]/) || [])[1] : null;
-    const lastBuildOk = lastBuild?.includes("SUCCESS");
+    // Le header du build est la PREMIÈRE ligne : "[date] SUCCESS" ou "[date] FAILED"
+    const buildLines = buildLog.split("\n").filter((l) => l.trim());
+    const header = buildLines[0] || null;
+    const lastBuildAt = header ? (header.match(/\[(.*?)\]/) || [])[1] : null;
+    const lastBuildOk = header?.includes("SUCCESS") ?? null;
+    const buildLogTail = buildLines.slice(-60).join("\n");
 
     res.json({
       users,
@@ -79,18 +79,15 @@ router.get("/stats", requireAuth, async (_req, res) => {
       screenshots,
       downloads: downloadCounts(30),
       lastBuild: { at: lastBuildAt, ok: lastBuildOk },
+      buildLog: buildLogTail,
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// GET /api/admin/users — liste (super-admin full, sinon aperçu)
-router.get("/users", requireAuth, async (req, res) => {
-  const user = (req as any).user;
-  if (user?.role !== "super-admin" && user?.role !== "admin") {
-    return res.status(403).json({ message: "Accès réservé aux admins" });
-  }
+// GET /api/admin/users — liste (admin seulement)
+router.get("/users", requireAdmin, async (_req, res) => {
   const users = await prisma.user.findMany({
     select: { id: true, username: true, name: true, email: true, role: true, banned: true, createdAt: true },
     orderBy: { createdAt: "desc" },
