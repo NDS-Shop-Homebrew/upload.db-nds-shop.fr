@@ -1,23 +1,9 @@
 import { useEffect, useState, useMemo } from "react";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-} from "../components/ui/table";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Link } from "react-router-dom";
-import { Search, Plus, Edit } from "lucide-react";
+import { Search, Plus, Edit, Image as ImageIcon } from "lucide-react";
 import BuildStatus from "../components/BuildStatus";
 
 interface Game {
@@ -25,13 +11,29 @@ interface Game {
   author: string;
   version: string;
   updated: string;
+  titleId?: string;
+  icon?: string;
+  screenshots?: { description: string; url: string }[];
   fileName?: string;
 }
 
-type SortKey = "title" | "author" | "version" | "updated";
+type SortKey = "title" | "author" | "updated";
 type SortOrder = "asc" | "desc";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
+
+function CompletionBadge({ ok, label }: { ok: boolean; label: string }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${
+        ok ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground"
+      }`}
+    >
+      <span className={`w-1.5 h-1.5 rounded-full ${ok ? "bg-green-500" : "bg-muted-foreground/50"}`} />
+      {label}
+    </span>
+  );
+}
 
 export default function Home() {
   const [games, setGames] = useState<Game[]>([]);
@@ -46,17 +48,12 @@ export default function Home() {
       const res = await fetch(`${API_URL}/api/games`);
       if (!res.ok) throw new Error("Erreur serveur");
       const data: Game[] = await res.json();
-
       const gamesWithFileName = data.map((g) => ({
         ...g,
         fileName:
           g.fileName ||
-          g.title
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, "-")
-            .replace(/^-+|-+$/g, "") + ".json",
+          g.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") + ".json",
       }));
-
       setGames(gamesWithFileName);
     } catch (err) {
       console.error("Erreur récupération jeux :", err);
@@ -82,10 +79,8 @@ export default function Home() {
           const timeB = new Date(b.updated).getTime();
           return sortOrder === "asc" ? timeA - timeB : timeB - timeA;
         }
-
         const valA = (a[sortKey] || "").toString().toLowerCase();
         const valB = (b[sortKey] || "").toString().toLowerCase();
-
         if (valA < valB) return sortOrder === "asc" ? -1 : 1;
         if (valA > valB) return sortOrder === "asc" ? 1 : -1;
         return 0;
@@ -93,20 +88,15 @@ export default function Home() {
   }, [games, search, sortKey, sortOrder]);
 
   return (
-    <div className="p-8 w-full max-w-7xl mx-auto space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="p-6 md:p-8 w-full max-w-7xl mx-auto space-y-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Bibliothèque de jeux
-          </h1>
-          <p className="text-muted-foreground">
-            Gérez vos fichiers JSON et métadonnées.
-          </p>
+          <h1 className="text-2xl font-bold tracking-tight">Bibliothèque de jeux</h1>
+          <p className="text-muted-foreground text-sm">Gérez vos fichiers JSON et métadonnées.</p>
         </div>
         <Link to="/edit/new">
           <Button className="gap-2">
-            <Plus size={18} />
-            Ajouter un jeu
+            <Plus size={18} /> Ajouter un jeu
           </Button>
         </Link>
       </div>
@@ -115,10 +105,7 @@ export default function Home() {
 
       <div className="flex flex-col md:flex-row items-center gap-4 bg-card p-4 rounded-lg border shadow-sm">
         <div className="relative flex-1 w-full">
-          <Search
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-            size={18}
-          />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
           <Input
             placeholder="Rechercher par titre ou auteur..."
             value={search}
@@ -126,27 +113,18 @@ export default function Home() {
             className="pl-10"
           />
         </div>
-
         <div className="flex gap-2 w-full md:w-auto">
-          <Select
-            value={sortKey}
-            onValueChange={(v) => setSortKey(v as SortKey)}
-          >
-            <SelectTrigger className="w-[180px]">
+          <Select value={sortKey} onValueChange={(v) => setSortKey(v as SortKey)}>
+            <SelectTrigger className="w-[160px]">
               <SelectValue placeholder="Trier par" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="title">Titre</SelectItem>
               <SelectItem value="author">Auteur</SelectItem>
-              <SelectItem value="version">Version</SelectItem>
               <SelectItem value="updated">Mise à jour</SelectItem>
             </SelectContent>
           </Select>
-
-          <Select
-            value={sortOrder}
-            onValueChange={(v) => setSortOrder(v as SortOrder)}
-          >
+          <Select value={sortOrder} onValueChange={(v) => setSortOrder(v as SortOrder)}>
             <SelectTrigger className="w-[130px]">
               <SelectValue placeholder="Ordre" />
             </SelectTrigger>
@@ -158,66 +136,59 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="rounded-md border bg-card">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Titre</TableHead>
-              <TableHead className="hidden md:table-cell">Auteur</TableHead>
-              <TableHead className="hidden md:table-cell">Version</TableHead>
-              <TableHead className="hidden md:table-cell">
-                Dernière MAJ
-              </TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-10">
-                  Chargement...
-                </TableCell>
-              </TableRow>
-            ) : filteredGames.length > 0 ? (
-              filteredGames.map((game) => (
-                <TableRow key={game.fileName}>
-                  <TableCell className="font-medium">
-                    <div className="flex flex-col">
-                      <span>{game.title}</span>
-                      <span className="text-xs text-muted-foreground md:hidden">
-                        {game.author}
-                      </span>
+      {isLoading ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="animate-pulse rounded-xl border border-border p-4">
+              <div className="aspect-square rounded-lg bg-muted mb-3" />
+              <div className="h-4 w-3/4 rounded bg-muted mb-2" />
+              <div className="h-3 w-1/2 rounded bg-muted" />
+            </div>
+          ))}
+        </div>
+      ) : filteredGames.length > 0 ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          {filteredGames.map((game) => {
+            const hasBoxart = game.screenshots?.some((s) => s.description === "Boxart");
+            const hasShot = game.screenshots?.some((s) => s.description !== "Boxart");
+            return (
+              <div key={game.fileName} className="rounded-xl border border-border bg-card p-4 hover:shadow-md transition-shadow">
+                <div className="aspect-square rounded-lg overflow-hidden bg-muted mb-3 ring-1 ring-border">
+                  {game.icon ? (
+                    <img src={game.icon} alt="" className="w-full h-full object-cover" style={{ imageRendering: "pixelated" }} />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                      <ImageIcon size={32} />
                     </div>
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    {game.author}
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    {game.version}
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
+                  )}
+                </div>
+                <h3 className="font-semibold text-sm line-clamp-2 leading-snug">{game.title}</h3>
+                <p className="text-xs text-muted-foreground mt-1 truncate">{game.author}</p>
+                <div className="flex flex-wrap gap-1.5 mt-2.5">
+                  <CompletionBadge ok={!!game.icon} label="Icône" />
+                  <CompletionBadge ok={!!game.titleId} label="TitleID" />
+                  <CompletionBadge ok={!!hasBoxart} label="Boxart" />
+                  <CompletionBadge ok={!!hasShot} label="Screens" />
+                </div>
+                <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
+                  <span className="text-xs text-muted-foreground">
                     {new Date(game.updated).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Link to={`/edit/${game.fileName}`}>
-                      <Button variant="outline" size="sm" className="gap-2">
-                        <Edit size={14} />
-                        Modifier
-                      </Button>
-                    </Link>
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center">
-                  Aucun jeu trouvé.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+                  </span>
+                  <Link to={`/edit/${game.fileName}`}>
+                    <Button variant="outline" size="sm" className="gap-1.5">
+                      <Edit size={14} /> Modifier
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="rounded-xl border border-border bg-card p-10 text-center text-muted-foreground">
+          Aucun jeu trouvé.
+        </div>
+      )}
     </div>
   );
 }

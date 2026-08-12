@@ -1,8 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  DarkMode as DarkModeIcon,
-  LightMode as LightModeIcon,
-} from "@mui/icons-material";
+import { Moon, Sun } from "lucide-react";
 
 export function DarkModeToggle() {
   const [darkMode, setDarkMode] = useState(false);
@@ -29,10 +26,10 @@ export function DarkModeToggle() {
   return (
     <button
       onClick={toggleDarkMode}
-      className="ml-2 p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+      className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground"
       aria-label="Toggle Dark Mode"
     >
-      {darkMode ? <LightModeIcon /> : <DarkModeIcon />}
+      {darkMode ? <Sun size={18} /> : <Moon size={18} />}
     </button>
   );
 }

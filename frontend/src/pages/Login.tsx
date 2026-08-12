@@ -2,14 +2,9 @@ import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { motion } from "framer-motion";
-import { DarkModeToggle } from "../components/DarkModeToggle";
+import { Gamepad2, LogIn } from "lucide-react";
 
 export default function Login() {
   const { login } = useAuth();
@@ -22,13 +17,10 @@ export default function Login() {
     e.preventDefault();
     setError("");
     setIsLoading(true);
-
     try {
       const success = await login(username, password);
-      if (!success) {
-        setError("Identifiants incorrects");
-      }
-    } catch (err) {
+      if (!success) setError("Identifiants incorrects");
+    } catch {
       setError("Erreur de connexion au serveur");
     } finally {
       setIsLoading(false);
@@ -36,20 +28,14 @@ export default function Login() {
   };
 
   return (
-    <div className="relative flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-100 via-gray-200 to-gray-300 dark:from-gray-900 dark:via-gray-850 dark:to-gray-900">
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-      >
-        <Card className="w-96 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 shadow-2xl rounded-2xl text-gray-900 dark:text-gray-100">
-          <CardHeader className="flex flex-col items-center space-y-2">
-            <img
-              src="/favicon.ico"
-              alt="NDS-Shop Logo"
-              className="w-12 h-12 mb-2"
-            />
-            <CardTitle className="text-center text-2xl font-bold tracking-wide">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0072CE]/10 via-background to-[#00A651]/10 p-4">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+        <Card className="w-full max-w-sm shadow-lg border-border">
+          <CardHeader className="flex flex-col items-center space-y-3">
+            <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center">
+              <Gamepad2 className="w-6 h-6 text-white" />
+            </div>
+            <CardTitle className="text-center text-xl font-bold">
               Connexion à NDS-Shop
             </CardTitle>
           </CardHeader>
@@ -61,7 +47,7 @@ export default function Login() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 disabled={isLoading}
-                className="bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-green-500"
+                className="h-11"
               />
               <Input
                 type="password"
@@ -69,30 +55,21 @@ export default function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={isLoading}
-                className="bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-green-500"
+                className="h-11"
               />
-
               {error && (
-                <div className="p-2 text-sm text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 rounded">
+                <div className="p-2.5 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg">
                   {error}
                 </div>
               )}
-
-              <Button
-                type="submit"
-                disabled={isLoading || !username || !password}
-                className="w-full bg-green-600 hover:bg-green-700 font-semibold text-white shadow-lg"
-              >
+              <Button type="submit" disabled={isLoading || !username || !password} className="w-full h-11 gap-2 font-semibold">
+                <LogIn size={18} />
                 {isLoading ? "Connexion en cours..." : "Se connecter"}
               </Button>
             </form>
           </CardContent>
         </Card>
       </motion.div>
-
-      <div className="absolute bottom-8 right-8">
-        <DarkModeToggle />
-      </div>
     </div>
   );
 }

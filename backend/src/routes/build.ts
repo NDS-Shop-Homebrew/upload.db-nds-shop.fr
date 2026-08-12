@@ -1,5 +1,5 @@
 import express from "express";
-import { execSync } from "child_process";
+import { spawn } from "child_process";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -7,46 +7,86 @@ import { requireAuth } from "../middleware/auth.ts";
 
 const router = express.Router();
 
-const BUILD_SCRIPT = process.env.BUILD_SCRIPT || "/usr/local/bin/nds-build.sh";
+const BUILD_SCRIPT =
+  process.env.BUILD_SCRIPT || "/srv/nds-shop/db/scripts/nds-build.sh";
+const BUILD_CWD = process.env.BUILD_CWD || "/srv/nds-shop/db";
+const BUILD_ROMS = process.env.BUILD_ROMS || "/srv/nds-shop/roms";
 const BUILD_LOG = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
   "../../build.log"
 );
 
+interface BuildState {
+  running: boolean;
+  status: "none" | "running" | "success" | "failed";
+  log: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+}
+
+let state: BuildState = {
+  running: false,
+  status: "none",
+  log: "",
+  startedAt: null,
+  finishedAt: null,
+};
+
+// POST /api/build — lance le build en arrière-plan (non bloquant)
 router.post("/", requireAuth, (req, res) => {
-  try {
-    const output = execSync(`"${BUILD_SCRIPT}" 2>&1`, {
-      timeout: 600000,
-      maxBuffer: 10 * 1024 * 1024,
-    }).toString();
-    const log = `[${new Date().toISOString()}] SUCCESS\n${output}`;
-    fs.writeFileSync(BUILD_LOG, log);
-    res.json({ message: "Build terminé", output: output.split("\n").filter(Boolean).slice(-10) });
-  } catch (err: any) {
-    const log = `[${new Date().toISOString()}] FAILED\n${err.stderr?.toString() || err.stdout?.toString() || err.message}`;
-    try { fs.writeFileSync(BUILD_LOG, log); } catch {}
-    res.status(500).json({ error: log.slice(0, 500) });
+  if (state.running) {
+    return res.status(409).json({ error: "Un build est déjà en cours" });
   }
+
+  state = {
+    running: true,
+    status: "running",
+    log: "",
+    startedAt: new Date().toISOString(),
+    finishedAt: null,
+  };
+  fs.writeFileSync(BUILD_LOG, "");
+
+  const child = spawn(BUILD_SCRIPT, ["--roms", BUILD_ROMS], {
+    cwd: BUILD_CWD,
+    shell: false,
+  });
+
+  const append = (chunk: Buffer) => {
+    const text = chunk.toString();
+    state.log += text;
+    try {
+      fs.appendFileSync(BUILD_LOG, text);
+    } catch {}
+  };
+  child.stdout.on("data", append);
+  child.stderr.on("data", append);
+
+  child.on("error", (err) => {
+    append(Buffer.from(`[spawn error] ${err.message}\n`));
+    state.running = false;
+    state.status = "failed";
+    state.finishedAt = new Date().toISOString();
+  });
+
+  child.on("close", (code) => {
+    state.running = false;
+    state.status = code === 0 ? "success" : "failed";
+    state.finishedAt = new Date().toISOString();
+  });
+
+  res.json({ message: "Build lancé en arrière-plan" });
 });
 
-router.get("/status", requireAuth, (req, res) => {
-  try {
-    if (!fs.existsSync(BUILD_LOG)) return res.json({ status: "none" });
-    const content = fs.readFileSync(BUILD_LOG, "utf-8");
-    const lines = content.split("\n");
-    const header = lines[0] || "";
-    const tail = lines.slice(-10).join("\n");
-    const isSuccess = header.includes("SUCCESS");
-    const isFailed = header.includes("FAILED");
-    res.json({
-      status: isSuccess ? "completed" : isFailed ? "failed" : "unknown",
-      conclusion: isSuccess ? "success" : isFailed ? "failure" : null,
-      log: tail,
-      updated_at: header.match(/\[(.*?)\]/)?.[1] || null,
-    });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
+// GET /api/build/status — log complet + position (temps réel)
+router.get("/status", requireAuth, (_req, res) => {
+  res.json({
+    running: state.running,
+    status: state.status,
+    log: state.log.slice(-20000),
+    startedAt: state.startedAt,
+    finishedAt: state.finishedAt,
+  });
 });
 
 export default router;
