@@ -1,7 +1,7 @@
 import { Outlet, NavLink, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import {
-  LayoutDashboard, Gamepad2, Users, Hammer, Settings, LogOut, Menu, X,
+  LayoutDashboard, Gamepad2, Users, UsersRound, Hammer, Settings, LogOut, Menu, X,
 } from "lucide-react";
 import { DarkModeToggle } from "./DarkModeToggle";
 import { useAuth } from "../context/AuthContext";
@@ -12,6 +12,7 @@ const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, adminOnly: false },
   { to: "/games", label: "Bibliothèque", icon: Gamepad2, adminOnly: false },
   { to: "/users", label: "Utilisateurs", icon: Users, adminOnly: true },
+  { to: "/team", label: "Équipe", icon: UsersRound, adminOnly: true },
   { to: "/build", label: "Build", icon: Hammer, adminOnly: false },
   { to: "/settings", label: "Paramètres", icon: Settings, adminOnly: false },
 ];

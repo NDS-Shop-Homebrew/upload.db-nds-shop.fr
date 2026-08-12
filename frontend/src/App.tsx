@@ -7,6 +7,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Games from "./pages/Games";
 import Users from "./pages/Users";
+import Team from "./pages/Team";
 import Build from "./pages/Build";
 import Settings from "./pages/Settings";
 import PrivateRoute from "./components/PrivateRoute";
@@ -29,6 +30,7 @@ export default function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/games" element={<Games />} />
           <Route path="/users" element={<AdminRoute><Users /></AdminRoute>} />
+          <Route path="/team" element={<AdminRoute><Team /></AdminRoute>} />
           <Route path="/build" element={<Build />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/edit/:fileName" element={<EditGameForm />} />
