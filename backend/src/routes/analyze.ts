@@ -4,7 +4,9 @@ import { analyzeNds } from "../lib/nds.ts";
 
 const router = express.Router();
 
-// Analyse d'une ROM NDS en mémoire (on ne stocke pas le fichier ici).
+// API ndsdb du site (même VM) pour récupérer le developer/publisher
+const NDSDB_BASE = process.env.NDSDB_BASE || "http://localhost:3001";
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 512 * 1024 * 1024 },
@@ -15,10 +17,31 @@ const upload = multer({
   },
 });
 
-router.post("/nds", upload.single("nds"), (req, res) => {
+async function fetchNdsdbMeta(titleId: string) {
+  try {
+    const r = await fetch(`${NDSDB_BASE}/api/v1/ndsdb/metadata/${titleId}`, {
+      signal: AbortSignal.timeout(3000),
+    });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch {
+    return null;
+  }
+}
+
+router.post("/nds", upload.single("nds"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "Aucun fichier reçu" });
   try {
     const meta = analyzeNds(req.file.buffer);
+
+    // Enrichit avec le developer/publisher depuis ndsdb si dispo
+    if (meta.titleId) {
+      const ndsdb = await fetchNdsdbMeta(meta.titleId);
+      if (ndsdb?.developer) meta.developer = ndsdb.developer;
+      if (ndsdb?.publisher) meta.publisher = ndsdb.publisher;
+      if (ndsdb?.genres?.length) meta.genres = ndsdb.genres;
+    }
+
     res.json(meta);
   } catch (err: any) {
     res.status(422).json({ error: err.message || "ROM NDS invalide" });

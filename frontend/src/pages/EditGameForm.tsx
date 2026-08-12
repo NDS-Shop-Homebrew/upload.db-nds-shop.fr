@@ -11,7 +11,7 @@ import {
   CardTitle,
   CardDescription,
 } from "../components/ui/card";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save, Lock, Sparkles } from "lucide-react";
 import { FileUploader } from "../components/FileUploader";
 
 interface Screenshot {
@@ -101,10 +101,11 @@ export default function EditGameForm() {
         ...prev,
         title: prev.title || title,
         titleId: meta.titleId || prev.titleId,
+        author: prev.author || meta.developer || "",
       }));
       if (meta.titleId)
         setMessage({
-          text: `ROM analysée: ${title} (${meta.titleId})`,
+          text: `ROM analysée: ${title} (${meta.titleId})${meta.developer ? " — " + meta.developer : ""}`,
           type: "success",
         });
     } catch (err) {
@@ -364,15 +365,28 @@ export default function EditGameForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="titleId">Title ID (auto-rempli par l'analyse ROM)</Label>
-            <Input
-              id="titleId"
-              name="titleId"
-              value={game.titleId || ""}
-              onChange={handleInputChange}
-              placeholder="Ex: ABXP"
-              className="font-mono uppercase"
-            />
+            <Label htmlFor="titleId">Title ID</Label>
+            <div className="flex items-center gap-2">
+              <Input
+                id="titleId"
+                name="titleId"
+                value={game.titleId || ""}
+                onChange={handleInputChange}
+                placeholder="Ex: ABXP"
+                className="font-mono uppercase"
+                disabled={isNew}
+              />
+              {isNew && (
+                <span className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
+                  <Lock size={12} /> auto
+                </span>
+              )}
+            </div>
+            {isNew && (
+              <p className="text-xs text-muted-foreground">
+                Rempli automatiquement par l'analyse de la ROM.
+              </p>
+            )}
           </div>
 
           <div className="space-y-3">
@@ -446,24 +460,6 @@ export default function EditGameForm() {
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FileUploader
-                label="Icône (1 seul)"
-                accept=".png,.jpg,.jpeg"
-                type="icon"
-                uploading={uploading}
-                items={getFileItems("icon")}
-                onUpload={handleUpload}
-              />
-              <FileUploader
-                label="Screenshots (Multiples)"
-                accept=".png,.jpg,.jpeg"
-                type="screenshot"
-                multiple={true}
-                uploading={uploading}
-                items={getFileItems("screenshot")}
-                onUpload={handleUpload}
-                onRemove={removeFile}
-              />
-              <FileUploader
                 label="ROM du jeu (.nds)"
                 accept=".nds"
                 type="nds"
@@ -473,14 +469,64 @@ export default function EditGameForm() {
                 onUpload={handleUpload}
                 onRemove={removeFile}
               />
-              <FileUploader
-                label="Forwarder (.cia)"
-                accept=".cia"
-                type="cia"
-                uploading={uploading}
-                items={getFileItems("cia")}
-                onUpload={handleUpload}
-              />
+
+              {isNew ? (
+                <>
+                  <div className="p-4 border rounded-md bg-muted/50 space-y-2">
+                    <p className="text-base font-semibold flex items-center gap-2">
+                      <Sparkles size={16} className="text-primary" /> Icône
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Extraite automatiquement de la ROM au build.
+                    </p>
+                  </div>
+                  <div className="p-4 border rounded-md bg-muted/50 space-y-2">
+                    <p className="text-base font-semibold flex items-center gap-2">
+                      <Sparkles size={16} className="text-primary" /> Screenshots
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Téléchargés automatiquement (libretro) au build.
+                    </p>
+                  </div>
+                  <div className="p-4 border rounded-md bg-muted/50 space-y-2">
+                    <p className="text-base font-semibold flex items-center gap-2">
+                      <Sparkles size={16} className="text-primary" /> Forwarder (.cia)
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Généré automatiquement à partir de la ROM au build.
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <FileUploader
+                    label="Icône (1 seul)"
+                    accept=".png,.jpg,.jpeg"
+                    type="icon"
+                    uploading={uploading}
+                    items={getFileItems("icon")}
+                    onUpload={handleUpload}
+                  />
+                  <FileUploader
+                    label="Screenshots (Multiples)"
+                    accept=".png,.jpg,.jpeg"
+                    type="screenshot"
+                    multiple={true}
+                    uploading={uploading}
+                    items={getFileItems("screenshot")}
+                    onUpload={handleUpload}
+                    onRemove={removeFile}
+                  />
+                  <FileUploader
+                    label="Forwarder (.cia)"
+                    accept=".cia"
+                    type="cia"
+                    uploading={uploading}
+                    items={getFileItems("cia")}
+                    onUpload={handleUpload}
+                  />
+                </>
+              )}
             </div>
           </div>
 

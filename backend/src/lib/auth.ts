@@ -83,7 +83,11 @@ export const auth = betterAuth({
       ipAddressHeaders: ["x-forwarded-for"],
     },
   },
-  trustedOrigins: ["https://upload.db-nds-shop.fr"],
+  trustedOrigins: [
+    "https://upload.db-nds-shop.fr",
+    "http://localhost:5173",
+    "http://localhost:3002",
+  ],
 });
 
 export type Session = typeof auth.$Infer.Session;

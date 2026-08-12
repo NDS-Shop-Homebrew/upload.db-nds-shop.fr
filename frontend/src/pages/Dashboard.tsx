@@ -64,11 +64,11 @@ export default function Dashboard() {
   const createUser = async () => {
     setMsg(null);
     const { error } = await (authClient.admin.createUser as any)({
-      username: newUser.username,
       email: `${newUser.username}@nds-shop.local`,
       name: newUser.username,
       password: newUser.password,
       role: newUser.role,
+      data: { username: newUser.username },
     });
     if (error) return setMsg({ text: error.message || "Erreur", ok: false });
     setMsg({ text: "Utilisateur créé", ok: true });
