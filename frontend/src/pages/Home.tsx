@@ -140,9 +140,9 @@ export default function Home() {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="animate-pulse rounded-xl border border-border p-4">
-              <div className="aspect-square rounded-lg bg-muted mb-3" />
-              <div className="h-4 w-3/4 rounded bg-muted mb-2" />
-              <div className="h-3 w-1/2 rounded bg-muted" />
+              <div className="w-20 h-20 mx-auto rounded-lg bg-muted mb-3" />
+              <div className="h-4 w-3/4 rounded bg-muted mb-2 mx-auto" />
+              <div className="h-3 w-1/2 rounded bg-muted mx-auto" />
             </div>
           ))}
         </div>
@@ -153,12 +153,12 @@ export default function Home() {
             const hasShot = game.screenshots?.some((s) => s.description !== "Boxart");
             return (
               <div key={game.fileName} className="rounded-xl border border-border bg-card p-4 hover:shadow-md transition-shadow">
-                <div className="aspect-square rounded-lg overflow-hidden bg-muted mb-3 ring-1 ring-border">
+                <div className="rounded-lg overflow-hidden bg-muted mb-3 ring-1 ring-border">
                   {game.icon ? (
-                    <img src={game.icon} alt="" className="w-full h-full object-cover" style={{ imageRendering: "pixelated" }} />
+                    <img src={game.icon} alt="" className="w-20 h-20 mx-auto object-contain" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                      <ImageIcon size={32} />
+                    <div className="w-20 h-20 mx-auto flex items-center justify-center text-muted-foreground">
+                      <ImageIcon size={28} />
                     </div>
                   )}
                 </div>
