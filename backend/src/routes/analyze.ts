@@ -1,8 +1,11 @@
 import express from "express";
 import multer from "multer";
 import { analyzeNds } from "../lib/nds.ts";
+import { requireAuth } from "../middleware/auth.ts";
 
 const router = express.Router();
+
+router.use(requireAuth);
 
 // API ndsdb du site (même VM) pour récupérer le developer/publisher
 const NDSDB_BASE = process.env.NDSDB_BASE || "http://localhost:3001";
