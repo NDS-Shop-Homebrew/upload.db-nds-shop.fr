@@ -3,8 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
 import {
-  Users, Gamepad2, FileArchive, Image as ImageIcon, Download, Rocket,
-  CheckCircle2, XCircle, Loader2, TrendingUp,
+  Gamepad2, FileArchive, Image as ImageIcon, Download, Rocket,
+  CheckCircle2, XCircle, Loader2, TrendingUp, AlertTriangle, Disc3, Clock,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useUI } from "../context/UIContext";
@@ -16,7 +16,13 @@ interface Stats {
   games: number;
   forwarders: number;
   screenshots: number;
-  downloads: { total: number; today: number; nds: number; cia: number; byGame: Record<string, number> };
+  roms: number;
+  incomplete: number;
+  noRom: number;
+  noIcon: number;
+  noBoxart: number;
+  recentGames: { title: string; updated: string }[];
+  downloads: { total: number; today: number; nds: number; cia: number; byGame: Record<string, number>; last7: number[] };
   lastBuild: { at: string | null; ok: boolean | null } | null;
   buildLog: string;
 }
@@ -47,7 +53,7 @@ export default function Dashboard() {
 
   const statCards = stats ? [
     { icon: Gamepad2, label: t("dashboard.games"), value: stats.games, color: "text-primary" },
-    { icon: Users, label: t("dashboard.users"), value: stats.users, color: "text-blue-500" },
+    { icon: Disc3, label: t("dashboard.roms"), value: stats.roms, color: "text-cyan-500" },
     { icon: FileArchive, label: t("dashboard.forwarders"), value: stats.forwarders, color: "text-amber-500" },
     { icon: ImageIcon, label: t("dashboard.screenshots"), value: stats.screenshots, color: "text-purple-500" },
     { icon: Download, label: t("dashboard.downloads"), value: stats.downloads.total, color: "text-green-600" },
@@ -59,6 +65,13 @@ export default function Dashboard() {
     ? Object.entries(stats.downloads.byGame).sort((a, b) => b[1] - a[1]).slice(0, 8)
     : [];
   const maxDownloads = topDownloads.length ? topDownloads[0][1] : 1;
+
+  const maxLast7 = stats?.downloads?.last7?.length ? Math.max(...stats.downloads.last7, 1) : 1;
+  const dayLabels = [...Array(7)].map((_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    return d.toLocaleDateString(undefined, { weekday: "short" });
+  });
 
   return (
     <div className="p-6 md:p-8 w-full max-w-7xl mx-auto space-y-6">
@@ -105,6 +118,23 @@ export default function Dashboard() {
         </Card>
       )}
 
+      {/* Alerte jeux incomplets */}
+      {stats && stats.incomplete > 0 && (
+        <Card className="border-amber-300">
+          <CardContent className="p-4 flex items-center gap-3">
+            <AlertTriangle size={20} className="text-amber-500 shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-medium">{t("dashboard.incomplete")}: <strong>{stats.incomplete}</strong></p>
+              <div className="flex gap-4 text-xs text-muted-foreground mt-1">
+                <span>{t("dashboard.noRom")}: <strong>{stats.noRom}</strong></span>
+                <span>{t("dashboard.noIcon")}: <strong>{stats.noIcon}</strong></span>
+                <span>{t("dashboard.noBoxart")}: <strong>{stats.noBoxart}</strong></span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Stats cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {statCards.map((c) => (
@@ -118,6 +148,54 @@ export default function Dashboard() {
           </Card>
         ))}
       </div>
+
+      {/* Graphique 7 jours + répartition NDS/CIA */}
+      {stats && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Card>
+            <CardHeader><CardTitle className="text-base">{t("dashboard.last7")}</CardTitle></CardHeader>
+            <CardContent>
+              <div className="flex items-end gap-2 h-32">
+                {stats.downloads.last7.map((c, i) => (
+                  <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                    <span className="text-xs text-muted-foreground">{c}</span>
+                    <div
+                      className="w-full bg-primary rounded-t"
+                      style={{ height: `${(c / maxLast7) * 100}%`, minHeight: c > 0 ? 4 : 2 }}
+                    />
+                    <span className="text-[10px] text-muted-foreground">{dayLabels[i]}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-4 text-xs text-muted-foreground mt-3">
+                <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-600 inline-block" /> {t("dashboard.nds")}: {stats.downloads.nds}</span>
+                <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500 inline-block" /> {t("dashboard.cia")}: {stats.downloads.cia}</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Jeux récents */}
+          <Card>
+            <CardHeader><CardTitle className="text-base">{t("dashboard.recentGames")}</CardTitle></CardHeader>
+            <CardContent className="space-y-2">
+              {stats.recentGames.length === 0 && (
+                <p className="text-sm text-muted-foreground">—</p>
+              )}
+              {stats.recentGames.map((g, i) => (
+                <div key={i} className="flex items-center gap-2 text-sm">
+                  <Clock size={13} className="text-muted-foreground shrink-0" />
+                  <span className="truncate flex-1">{g.title}</span>
+                  {g.updated && (
+                    <span className="text-xs text-muted-foreground shrink-0">
+                      {new Date(g.updated).toLocaleDateString()}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Top téléchargements */}
       {topDownloads.length > 0 && (

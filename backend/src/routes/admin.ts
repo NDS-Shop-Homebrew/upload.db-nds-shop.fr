@@ -11,11 +11,11 @@ const FORWARDER_PATH =
   process.env.FORWARDER_PATH || "/srv/nds-shop/db/frontend/public/forwarder";
 const SCREENSHOTS_PATH =
   process.env.SCREENSHOTS_PATH || "/srv/nds-shop/db/frontend/public/assets/images/screenshots";
+const ROMS_PATH = process.env.ROMS_PATH || "/srv/nds-shop/roms";
 const BUILD_LOG = path.join(
   path.dirname(new URL(import.meta.url).pathname),
   "../../build.log"
 );
-const NGINX_LOG = "/var/log/nginx/access.log";
 
 // Discord (bot pour lister les membres du serveur)
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN || "";
@@ -31,41 +31,57 @@ const discordApi = async (path: string) => {
   return r.json();
 };
 
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
 // Nombre de téléchargements .nds / .cia depuis le log nginx (derniers N jours)
 function downloadCounts(days = 30) {
-  const counts = { total: 0, today: 0, nds: 0, cia: 0, byGame: {} as Record<string, number> };
-  if (!fs.existsSync(NGINX_LOG)) return counts;
+  const counts = { total: 0, today: 0, nds: 0, cia: 0, byGame: {} as Record<string, number>, last7: [0,0,0,0,0,0,0] };
   const cutoff = Date.now() / 1000 - days * 86400;
-  try {
-    const lines = fs.readFileSync(NGINX_LOG, "utf8").split("\n");
-    for (const line of lines) {
-      // ligne nginx: IP - - [date] "GET /games/xxx.nds HTTP/1.1" 200 ...
-      const m = line.match(/\[(\d{2})\/(\w{3})\/(\d{4}):(\d{2}):(\d{2}):(\d{2})[^\]]*\].*?"GET (\/games\/[^"]+\.(nds|cia))/);
-      if (!m) continue;
-      const ts = Date.parse(`${m[3]} ${m[2]} ${m[1]} ${m[4]}:${m[5]}:${m[6]}`);
-      if (isNaN(ts) || ts < cutoff * 1000) continue;
-      const file = decodeURIComponent(m[7]);
-      counts.total++;
-      const now = new Date();
-      if (
-        now.getFullYear() === new Date(ts).getFullYear() &&
-        now.getMonth() === new Date(ts).getMonth() &&
-        now.getDate() === new Date(ts).getDate()
-      )
-        counts.today++;
-      if (file.endsWith(".nds")) counts.nds++;
-      else counts.cia++;
-      const game = file.split("/").pop() || "?";
-      counts.byGame[game] = (counts.byGame[game] || 0) + 1;
-    }
-  } catch {}
+  const dayStart = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() / 1000;
+  const todayStart = dayStart(new Date());
+  // chemins de log candidats — on fusionne tous ceux qui existent
+  const logPaths = [
+    process.env.NGINX_LOG,
+    "/var/log/nginx/access.log",
+    "/var/log/nginx/db-nds-shop.access.log",
+    "/srv/nds-shop/logs/access.log",
+  ].filter(Boolean) as string[];
+
+  const RE = /\[(\d{2})\/(\w{3})\/(\d{4}):(\d{2}):(\d{2}):(\d{2})[^\]]*\].*?"GET (\S+\.(?:nds|cia))/;
+  for (const logPath of logPaths) {
+    if (!fs.existsSync(logPath)) continue;
+    try {
+      const lines = fs.readFileSync(logPath, "utf8").split("\n");
+      for (const line of lines) {
+        // ligne nginx: IP - - [18/Sep/2026:14:00:00 +0200] "GET /games/xxx.nds HTTP/1.1" 200 ...
+        const m = line.match(RE);
+        if (!m) continue;
+        const mon = MONTHS.indexOf(m[2]);
+        if (mon < 0) continue;
+        const ts = new Date(Number(m[3]), mon, Number(m[1]), Number(m[4]), Number(m[5]), Number(m[6])).getTime() / 1000;
+        if (isNaN(ts) || ts < cutoff) continue;
+        const file = decodeURIComponent(m[7].replace(/^\/games\//, ""));
+        counts.total++;
+        if (ts >= todayStart) counts.today++;
+        if (file.endsWith(".nds")) counts.nds++;
+        else counts.cia++;
+        const game = file.split("/").pop() || "?";
+        counts.byGame[game] = (counts.byGame[game] || 0) + 1;
+        // historique 7 jours
+        for (let i = 0; i < 7; i++) {
+          const start = todayStart - i * 86400;
+          if (ts >= start) { counts.last7[i]++; break; }
+        }
+      }
+    } catch {}
+  }
   return counts;
 }
 
 // GET /api/admin/stats — dashboard complet
 router.get("/stats", requireAuth, async (_req, res) => {
   try {
-    const [users, games, forwarders, screenshots, buildLog] = await Promise.all([
+    const [users, games, forwarders, screenshots, roms, buildLog] = await Promise.all([
       prisma.user.count(),
       fs.existsSync(GAMES_PATH)
         ? fs.readdirSync(GAMES_PATH).filter((f) => f.endsWith(".json")).length
@@ -76,8 +92,40 @@ router.get("/stats", requireAuth, async (_req, res) => {
       fs.existsSync(SCREENSHOTS_PATH)
         ? fs.readdirSync(SCREENSHOTS_PATH).filter((d) => fs.statSync(path.join(SCREENSHOTS_PATH, d)).isDirectory()).length
         : 0,
+      fs.existsSync(ROMS_PATH)
+        ? fs.readdirSync(ROMS_PATH).filter((f) => f.endsWith(".nds")).length
+        : 0,
       fs.existsSync(BUILD_LOG) ? fs.readFileSync(BUILD_LOG, "utf8") : "",
     ]);
+
+    // Jeux incomplets : manque ROM, icône, boxart, titleId ou screenshots
+    let incomplete = 0, noRom = 0, noIcon = 0, noBoxart = 0;
+    let recentGames: { title: string; updated: string }[] = [];
+    if (fs.existsSync(GAMES_PATH)) {
+      const files = fs.readdirSync(GAMES_PATH).filter((f) => f.endsWith(".json"));
+      recentGames = files
+        .map((f) => {
+          try {
+            return JSON.parse(fs.readFileSync(path.join(GAMES_PATH, f), "utf-8"));
+          } catch { return null; }
+        })
+        .filter(Boolean)
+        .map((g) => ({ title: g.title || "?", updated: g.updated || "" }))
+        .sort((a, b) => (b.updated || "").localeCompare(a.updated || ""))
+        .slice(0, 8);
+      for (const f of files) {
+        try {
+          const g = JSON.parse(fs.readFileSync(path.join(GAMES_PATH, f), "utf-8"));
+          const hasRom = Object.keys(g.downloads || {}).some((k: string) => k.endsWith(".nds"));
+          const hasIcon = !!g.icon;
+          const hasBoxart = (g.screenshots || []).some((s: any) => s.description === "Boxart");
+          if (!hasRom) noRom++;
+          if (!hasIcon) noIcon++;
+          if (!hasBoxart) noBoxart++;
+          if (!hasRom || !hasIcon || !hasBoxart) incomplete++;
+        } catch {}
+      }
+    }
 
     // Le header du build est la PREMIÈRE ligne : "[date] SUCCESS" ou "[date] FAILED"
     const buildLines = buildLog.split("\n").filter((l) => l.trim());
@@ -91,6 +139,12 @@ router.get("/stats", requireAuth, async (_req, res) => {
       games,
       forwarders,
       screenshots,
+      roms,
+      incomplete,
+      noRom,
+      noIcon,
+      noBoxart,
+      recentGames,
       downloads: downloadCounts(30),
       lastBuild: { at: lastBuildAt, ok: lastBuildOk },
       buildLog: buildLogTail,

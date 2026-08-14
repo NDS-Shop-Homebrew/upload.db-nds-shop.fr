@@ -26,6 +26,10 @@ interface Game {
   title: string;
   titleId?: string;
   author: string;
+  developer?: string;
+  publisher?: string;
+  genres?: string[];
+  description?: string;
   categories: string[];
   systems: string[];
   downloads: Downloads;
@@ -63,6 +67,10 @@ export default function EditGameForm() {
   const [game, setGame] = useState<Game>({
     title: "",
     author: "",
+    developer: "",
+    publisher: "",
+    genres: [],
+    description: "",
     categories: ["game"],
     systems: ["DS"],
     downloads: {},
@@ -99,6 +107,10 @@ export default function EditGameForm() {
         title: prev.title || title,
         titleId: meta.titleId || prev.titleId,
         author: prev.author || meta.developer || "",
+        developer: meta.developer || prev.developer || "",
+        publisher: meta.publisher || prev.publisher || "",
+        genres: meta.genres?.length ? meta.genres : prev.genres || [],
+        description: prev.description || meta.description || meta.description_en || meta.description_fr || "",
       }));
       if (meta.titleId)
         setMessage({
@@ -146,6 +158,17 @@ export default function EditGameForm() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setGame((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleGenresChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setGame((prev) => ({
+      ...prev,
+      genres: value
+        .split(",")
+        .map((g) => g.trim())
+        .filter(Boolean),
+    }));
   };
 
   const toggleArrayValue = (field: "categories" | "systems", value: string) => {
@@ -359,6 +382,51 @@ export default function EditGameForm() {
                 placeholder={t("edit.authorPh")}
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="developer">{t("edit.developer")}</Label>
+              <Input
+                id="developer"
+                name="developer"
+                value={game.developer || ""}
+                onChange={handleInputChange}
+                placeholder="Ex: Nintendo"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="publisher">{t("edit.publisher")}</Label>
+              <Input
+                id="publisher"
+                name="publisher"
+                value={game.publisher || ""}
+                onChange={handleInputChange}
+                placeholder="Ex: Nintendo"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="genres">{t("edit.genres")}</Label>
+              <Input
+                id="genres"
+                name="genres"
+                value={game.genres?.join(", ") || ""}
+                onChange={handleGenresChange}
+                placeholder="Platform, Adventure"
+              />
+              <p className="text-xs text-muted-foreground">{t("edit.genresHint")}</p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="description">{t("edit.descLabel")}</Label>
+            <textarea
+              id="description"
+              name="description"
+              value={game.description || ""}
+              onChange={(e) => setGame((prev) => ({ ...prev, description: e.target.value }))}
+              placeholder="Résumé du jeu..."
+              rows={4}
+              className="w-full rounded-md border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+            <p className="text-xs text-muted-foreground">{t("edit.descHint")}</p>
           </div>
 
           <div className="space-y-2">
