@@ -7,6 +7,9 @@ import {
   CheckCircle2, XCircle, Loader2, TrendingUp,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { useUI } from "../context/UIContext";
+import { DarkModeToggle } from "../components/DarkModeToggle";
+import { LangToggle } from "../components/LangToggle";
 
 interface Stats {
   users: number;
@@ -22,6 +25,7 @@ const API_URL = import.meta.env.VITE_API_URL || "";
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const { t } = useUI();
   const [stats, setStats] = useState<Stats | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -42,12 +46,12 @@ export default function Dashboard() {
   useEffect(() => { load(); }, []);
 
   const statCards = stats ? [
-    { icon: Gamepad2, label: "Jeux", value: stats.games, color: "text-primary" },
-    { icon: Users, label: "Utilisateurs", value: stats.users, color: "text-blue-500" },
-    { icon: FileArchive, label: "Forwarders", value: stats.forwarders, color: "text-amber-500" },
-    { icon: ImageIcon, label: "Screenshots", value: stats.screenshots, color: "text-purple-500" },
-    { icon: Download, label: "Téléchargements", value: stats.downloads.total, color: "text-green-600" },
-    { icon: TrendingUp, label: "Aujourd'hui", value: stats.downloads.today, color: "text-red-500" },
+    { icon: Gamepad2, label: t("dashboard.games"), value: stats.games, color: "text-primary" },
+    { icon: Users, label: t("dashboard.users"), value: stats.users, color: "text-blue-500" },
+    { icon: FileArchive, label: t("dashboard.forwarders"), value: stats.forwarders, color: "text-amber-500" },
+    { icon: ImageIcon, label: t("dashboard.screenshots"), value: stats.screenshots, color: "text-purple-500" },
+    { icon: Download, label: t("dashboard.downloads"), value: stats.downloads.total, color: "text-green-600" },
+    { icon: TrendingUp, label: t("dashboard.today"), value: stats.downloads.today, color: "text-red-500" },
   ] : [];
 
   // Barres téléchargements par jeu (top 8)
@@ -60,18 +64,22 @@ export default function Dashboard() {
     <div className="p-6 md:p-8 w-full max-w-7xl mx-auto space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("dashboard.title")}</h1>
           <p className="text-muted-foreground text-sm">
-            Bonjour <strong>{user?.username}</strong> · rôle{" "}
+            {t("dashboard.greeting")} <strong>{user?.username}</strong> · {t("dashboard.role")}{" "}
             <Badge variant={user?.role === "admin" ? "default" : "secondary"}>{user?.role}</Badge>
           </p>
         </div>
-        <Button onClick={load} variant="outline" size="sm" disabled={loading}>
-          {loading ? <Loader2 size={14} className="animate-spin" /> : "Rafraîchir"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <LangToggle />
+          <DarkModeToggle />
+          <Button onClick={load} variant="outline" size="sm" disabled={loading}>
+            {loading ? <Loader2 size={14} className="animate-spin" /> : t("dashboard.refresh")}
+          </Button>
+        </div>
       </div>
 
-      {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">{error}</p>}
+      {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">{t("dashboard.statsError")}: {error}</p>}
 
       {/* Dernier build */}
       {stats?.lastBuild && (
@@ -79,17 +87,17 @@ export default function Dashboard() {
           <CardContent className="p-4 flex items-center gap-3">
             <Rocket size={20} className="text-primary shrink-0" />
             <div className="flex-1">
-              <p className="text-sm font-medium">Dernier build</p>
+              <p className="text-sm font-medium">{t("dashboard.lastBuild")}</p>
               <p className="text-sm">
-                {stats.lastBuild.ok === null ? "Aucun build effectué" : stats.lastBuild.ok
-                  ? <span className="inline-flex items-center gap-1 text-green-600"><CheckCircle2 size={15} /> Succès</span>
-                  : <span className="inline-flex items-center gap-1 text-red-600"><XCircle size={15} /> Échec</span>}
+                {stats.lastBuild.ok === null ? t("dashboard.noBuild") : stats.lastBuild.ok
+                  ? <span className="inline-flex items-center gap-1 text-green-600"><CheckCircle2 size={15} /> {t("dashboard.success")}</span>
+                  : <span className="inline-flex items-center gap-1 text-red-600"><XCircle size={15} /> {t("dashboard.failed")}</span>}
                 {stats.lastBuild.at && <span className="text-muted-foreground"> · {new Date(stats.lastBuild.at).toLocaleString()}</span>}
               </p>
             </div>
             {stats.buildLog && (
               <details className="text-xs w-full md:w-1/2">
-                <summary className="cursor-pointer text-muted-foreground hover:text-foreground">Voir le log</summary>
+                <summary className="cursor-pointer text-muted-foreground hover:text-foreground">{t("dashboard.viewLog")}</summary>
                 <pre className="mt-2 bg-muted p-3 rounded-md max-h-40 overflow-y-auto whitespace-pre-wrap leading-relaxed">{stats.buildLog}</pre>
               </details>
             )}
@@ -114,7 +122,7 @@ export default function Dashboard() {
       {/* Top téléchargements */}
       {topDownloads.length > 0 && (
         <Card>
-          <CardHeader><CardTitle className="text-base">Top téléchargements (30 jours)</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">{t("dashboard.topDownloads")}</CardTitle></CardHeader>
           <CardContent className="space-y-2">
             {topDownloads.map(([game, count]) => (
               <div key={game} className="flex items-center gap-3">
@@ -134,7 +142,7 @@ export default function Dashboard() {
 
       {/* Footer note */}
       <p className="text-xs text-muted-foreground text-center pt-4">
-        NDS-Shop · {new Date().getFullYear()} — Back-office
+        NDS-Shop · {new Date().getFullYear()} — {t("nav.backoffice")}
       </p>
     </div>
   );

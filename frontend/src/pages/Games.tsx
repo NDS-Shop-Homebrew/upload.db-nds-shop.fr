@@ -4,6 +4,7 @@ import { Input } from "../components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Link } from "react-router-dom";
 import { Search, Plus, Edit, Image as ImageIcon } from "lucide-react";
+import { useUI } from "../context/UIContext";
 
 interface Game {
   title: string;
@@ -35,6 +36,7 @@ function CompletionBadge({ ok, label }: { ok: boolean; label: string }) {
 }
 
 export default function Games() {
+  const { t } = useUI();
   const [games, setGames] = useState<Game[]>([]);
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("updated");
@@ -90,12 +92,12 @@ export default function Games() {
     <div className="p-6 md:p-8 w-full max-w-7xl mx-auto space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Bibliothèque de jeux</h1>
-          <p className="text-muted-foreground text-sm">Gérez vos fichiers JSON et métadonnées.</p>
+          <h1 className="text-2xl font-bold tracking-tight">{t("games.title")}</h1>
+          <p className="text-muted-foreground text-sm">{t("games.subtitle")}</p>
         </div>
         <Link to="/edit/new">
           <Button className="gap-2">
-            <Plus size={18} /> Ajouter un jeu
+            <Plus size={18} /> {t("games.add")}
           </Button>
         </Link>
       </div>
@@ -104,7 +106,7 @@ export default function Games() {
         <div className="relative flex-1 w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
           <Input
-            placeholder="Rechercher par titre ou auteur..."
+            placeholder={t("games.search")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-10"
@@ -113,21 +115,21 @@ export default function Games() {
         <div className="flex gap-2 w-full md:w-auto">
           <Select value={sortKey} onValueChange={(v) => setSortKey(v as SortKey)}>
             <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="Trier par" />
+              <SelectValue placeholder={t("games.sortBy")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="title">Titre</SelectItem>
-              <SelectItem value="author">Auteur</SelectItem>
-              <SelectItem value="updated">Mise à jour</SelectItem>
+              <SelectItem value="title">{t("games.titleCol")}</SelectItem>
+              <SelectItem value="author">{t("games.authorCol")}</SelectItem>
+              <SelectItem value="updated">{t("games.updatedCol")}</SelectItem>
             </SelectContent>
           </Select>
           <Select value={sortOrder} onValueChange={(v) => setSortOrder(v as SortOrder)}>
             <SelectTrigger className="w-[130px]">
-              <SelectValue placeholder="Ordre" />
+              <SelectValue placeholder={t("games.sortOrder")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="asc">Croissant</SelectItem>
-              <SelectItem value="desc">Décroissant</SelectItem>
+              <SelectItem value="asc">{t("games.asc")}</SelectItem>
+              <SelectItem value="desc">{t("games.desc")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -173,7 +175,7 @@ export default function Games() {
                   </span>
                   <Link to={`/edit/${game.fileName}`}>
                     <Button variant="outline" size="sm" className="gap-1.5">
-                      <Edit size={14} /> Modifier
+                      <Edit size={14} /> {t("games.edit")}
                     </Button>
                   </Link>
                 </div>
@@ -183,7 +185,7 @@ export default function Games() {
         </div>
       ) : (
         <div className="rounded-xl border border-border bg-card p-10 text-center text-muted-foreground">
-          Aucun jeu trouvé.
+          {t("games.noResults")}
         </div>
       )}
     </div>

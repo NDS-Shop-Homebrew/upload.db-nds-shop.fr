@@ -3,6 +3,7 @@ import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
 import { UsersRound, Save, Search, RefreshCw } from "lucide-react";
+import { useUI } from "../context/UIContext";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
 
@@ -25,6 +26,7 @@ interface Guild {
 }
 
 export default function Team() {
+  const { t } = useUI();
   const [members, setMembers] = useState<DiscordMember[]>([]);
   const [guild, setGuild] = useState<Guild | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -38,20 +40,20 @@ export default function Team() {
     setLoading(true);
     setError(null);
     try {
-      const [m, t, g] = await Promise.all([
+      const [m, teamRes, g] = await Promise.all([
         fetch(`${API_URL}/api/admin/discord/members`, { credentials: "include" }),
         fetch(`${API_URL}/api/admin/discord/team`, { credentials: "include" }),
         fetch(`${API_URL}/api/admin/discord/guild`, { credentials: "include" }).catch(() => null),
       ]);
       if (!m.ok) throw new Error(await m.text());
       const members: DiscordMember[] = await m.json();
-      const team = await t.json();
+      const team = await teamRes.json();
       const guild = g?.ok ? await g.json() : null;
       setMembers(members);
       setSelected(new Set(team.discordIds || []));
       setGuild(guild);
     } catch (e: any) {
-      setError(e.message || "Erreur de chargement");
+      setError(e.message || t("team.loading"));
     } finally {
       setLoading(false);
     }
@@ -77,7 +79,7 @@ export default function Team() {
         body: JSON.stringify({ discordIds: [...selected] }),
       });
       if (!r.ok) throw new Error(await r.text());
-      setMsg({ text: "Équipe sauvegardée", ok: true });
+      setMsg({ text: t("team.saved"), ok: true });
     } catch (e: any) {
       setMsg({ text: e.message || "Erreur", ok: false });
     } finally {
@@ -99,18 +101,18 @@ export default function Team() {
       <div className="flex flex-wrap justify-between items-center gap-3">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
-            <UsersRound className="w-6 h-6 text-primary" /> Équipe
+            <UsersRound className="w-6 h-6 text-primary" /> {t("team.title")}
           </h1>
           <p className="text-muted-foreground text-sm">
-            Sélectionnez les membres Discord affichés sur la page À propos.
+            {t("team.subtitle")}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" onClick={load} className="gap-1.5">
-            <RefreshCw size={14} /> Actualiser
+            <RefreshCw size={14} /> {t("team.refresh")}
           </Button>
           <Button size="sm" onClick={save} disabled={saving} className="gap-1.5">
-            <Save size={14} /> {saving ? "Enregistrement…" : "Enregistrer"}
+            <Save size={14} /> {saving ? "…" : t("team.save")}
           </Button>
         </div>
       </div>
@@ -141,13 +143,13 @@ export default function Team() {
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Rechercher un membre…"
+          placeholder={t("team.search")}
           className="h-10 w-full rounded-lg border border-input bg-background pl-9 pr-3 text-sm"
         />
       </div>
 
       {loading ? (
-        <p className="text-muted-foreground text-sm">Chargement…</p>
+        <p className="text-muted-foreground text-sm">{t("team.loading")}</p>
       ) : (
         <Card>
           <CardContent className="p-0">
@@ -167,7 +169,7 @@ export default function Team() {
                       <p className="text-sm font-medium truncate">{m.global_name}</p>
                       <p className="text-xs text-muted-foreground truncate">{m.nick || m.username}</p>
                     </div>
-                    {on && <Badge>Équipe</Badge>}
+                    {on && <Badge>{t("team.teamBadge")}</Badge>}
                     <div className={`w-5 h-5 rounded border flex items-center justify-center shrink-0 ${on ? "bg-primary border-primary text-primary-foreground" : "border-input"}`}>
                       {on && <span className="text-xs">✓</span>}
                     </div>
@@ -176,7 +178,7 @@ export default function Team() {
               })}
               {sorted.length === 0 && (
                 <p className="p-6 text-center text-sm text-muted-foreground">
-                  {members.length === 0 ? "Aucun membre trouvé (vérifier le token Discord côté serveur)." : "Aucun résultat."}
+                  {members.length === 0 ? t("team.noMembers") : t("team.noResults")}
                 </p>
               )}
             </div>

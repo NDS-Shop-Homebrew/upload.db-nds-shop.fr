@@ -13,6 +13,7 @@ import {
 } from "../components/ui/card";
 import { ArrowLeft, Save, Lock, Sparkles } from "lucide-react";
 import { FileUploader } from "../components/FileUploader";
+import { useUI } from "../context/UIContext";
 
 interface Screenshot {
   url: string;
@@ -45,11 +46,6 @@ const availableVersions = [
 
 const API_URL = import.meta.env.VITE_API_URL || "";
 
-const authHeaders = (): Record<string, string> => {
-  const token = localStorage.getItem("token");
-  return token ? { Authorization: `Bearer ${token}` } : {};
-};
-
 const formatDate = () => {
   const d = new Date();
   const pad = (n: number) => n.toString().padStart(2, "0");
@@ -59,6 +55,7 @@ const formatDate = () => {
 };
 
 export default function EditGameForm() {
+  const { t } = useUI();
   const { fileName } = useParams<{ fileName: string }>();
   const navigate = useNavigate();
   const isNew = !fileName || fileName === "new";
@@ -91,7 +88,7 @@ export default function EditGameForm() {
       formData.append("nds", file);
       const res = await fetch(`${API_URL}/api/analyze/nds`, {
         method: "POST",
-        headers: authHeaders(),
+        credentials: "include",
         body: formData,
       });
       if (!res.ok) throw new Error(await res.text());
@@ -109,7 +106,7 @@ export default function EditGameForm() {
           type: "success",
         });
     } catch (err) {
-      setMessage({ text: "Analyse ROM impossible", type: "error" });
+      setMessage({ text: t("edit.analyzeFail"), type: "error" });
     } finally {
       setAnalyzing(false);
     }
@@ -121,7 +118,7 @@ export default function EditGameForm() {
       setLoading(true);
       try {
         const res = await fetch(`${API_URL}/api/games`);
-        if (!res.ok) throw new Error("Erreur de chargement");
+        if (!res.ok) throw new Error(t("edit.loadDataFail"));
         const games: Game[] = await res.json();
         const g = games.find(
           (game) =>
@@ -138,7 +135,7 @@ export default function EditGameForm() {
         }
       } catch (err) {
         console.error(err);
-        setMessage({ text: "Erreur lors du chargement du jeu", type: "error" });
+        setMessage({ text: t("edit.loadFail"), type: "error" });
       } finally {
         setLoading(false);
       }
@@ -169,14 +166,14 @@ export default function EditGameForm() {
       formData.append(field, file);
       const res = await fetch(`${API_URL}/api/upload/${endpoint}`, {
         method: "POST",
-        headers: authHeaders(),
+        credentials: "include",
         body: formData,
       });
       if (!res.ok) throw new Error(await res.text());
       return await res.json();
     } catch (err) {
       console.error(err);
-      setMessage({ text: `Erreur upload ${endpoint}`, type: "error" });
+      setMessage({ text: `${t("edit.uploadFail")} ${endpoint}`, type: "error" });
       return null;
     }
   };
@@ -243,7 +240,7 @@ export default function EditGameForm() {
 
   const saveGame = async () => {
     if (!game.title) {
-      setMessage({ text: "Le titre est obligatoire", type: "error" });
+      setMessage({ text: t("edit.titleRequired"), type: "error" });
       return;
     }
 
@@ -256,9 +253,9 @@ export default function EditGameForm() {
     try {
       const res = await fetch(url, {
         method,
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
-          ...authHeaders(),
         },
         body: JSON.stringify({ ...game, updated: formatDate() }),
       });
@@ -266,7 +263,7 @@ export default function EditGameForm() {
       if (res.status === 409) {
         const data = await res.json();
         setMessage({
-          text: `Ce jeu existe déjà (${data.fileName}).`,
+          text: `${t("edit.exists")} (${data.fileName}).`,
           type: "error",
         });
         if (data.fileName)
@@ -280,7 +277,7 @@ export default function EditGameForm() {
       const data = await res.json();
 
       setMessage({
-        text: data.message || "Sauvegardé avec succès",
+        text: data.message || t("edit.saved"),
         type: "success",
       });
 
@@ -292,7 +289,7 @@ export default function EditGameForm() {
       }
     } catch (err) {
       console.error(err);
-      setMessage({ text: "Erreur lors de la sauvegarde", type: "error" });
+      setMessage({ text: t("edit.saveFail"), type: "error" });
     }
   };
 
@@ -314,7 +311,7 @@ export default function EditGameForm() {
   if (loading) {
     return (
       <div className="p-8 text-center animate-pulse">
-        Chargement des données du jeu...
+        {t("edit.loading")}
       </div>
     );
   }
@@ -326,46 +323,46 @@ export default function EditGameForm() {
         onClick={() => navigate("/")}
         className="mb-6 gap-2"
       >
-        <ArrowLeft size={16} /> Retour à la liste
+        <ArrowLeft size={16} /> {t("edit.back")}
       </Button>
 
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl">
-            {isNew ? "Nouveau Jeu" : `Éditer: ${game.title}`}
+            {isNew ? t("edit.new") : `${t("edit.edit")} ${game.title}`}
           </CardTitle>
           <CardDescription>
-            Remplissez les métadonnées et uploadez les fichiers nécessaires.
+            {t("edit.description")}
           </CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label htmlFor="title">Titre du jeu *</Label>
+              <Label htmlFor="title">{t("edit.title")}</Label>
               <Input
                 id="title"
                 name="title"
                 value={game.title}
                 onChange={handleInputChange}
-                placeholder="Ex: Pokémon Version Platine"
+                placeholder={t("edit.titlePh")}
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="author">Auteur / Éditeur</Label>
+              <Label htmlFor="author">{t("edit.author")}</Label>
               <Input
                 id="author"
                 name="author"
                 value={game.author}
                 onChange={handleInputChange}
-                placeholder="Ex: Nintendo"
+                placeholder={t("edit.authorPh")}
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="titleId">Title ID</Label>
+            <Label htmlFor="titleId">{t("edit.titleId")}</Label>
             <div className="flex items-center gap-2">
               <Input
                 id="titleId"
@@ -384,13 +381,13 @@ export default function EditGameForm() {
             </div>
             {isNew && (
               <p className="text-xs text-muted-foreground">
-                Rempli automatiquement par l'analyse de la ROM.
+                {t("edit.titleIdAuto")}
               </p>
             )}
           </div>
 
           <div className="space-y-3">
-            <Label className="text-base">Catégories</Label>
+            <Label className="text-base">{t("edit.categories")}</Label>
             <div className="flex flex-wrap gap-4">
               {availableCategories.map((c) => (
                 <div
@@ -411,7 +408,7 @@ export default function EditGameForm() {
           </div>
 
           <div className="space-y-3">
-            <Label className="text-base">Systèmes compatibles</Label>
+            <Label className="text-base">{t("edit.systems")}</Label>
             <div className="flex flex-wrap gap-4">
               {availableSystems.map((s) => (
                 <div
@@ -432,7 +429,7 @@ export default function EditGameForm() {
           </div>
 
           <div className="space-y-3">
-            <Label className="text-base">Version / Région</Label>
+            <Label className="text-base">{t("edit.version")}</Label>
             <div className="flex flex-wrap gap-4">
               {availableVersions.map((v) => (
                 <div
@@ -456,11 +453,11 @@ export default function EditGameForm() {
 
           <div className="space-y-4">
             <h3 className="text-lg font-semibold border-b pb-2">
-              Fichiers & Assets
+              {t("edit.files")}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FileUploader
-                label="ROM du jeu (.nds)"
+                label={t("edit.romLabel")}
                 accept=".nds"
                 type="nds"
                 multiple={true}
@@ -474,33 +471,33 @@ export default function EditGameForm() {
                 <>
                   <div className="p-4 border rounded-md bg-muted/50 space-y-2">
                     <p className="text-base font-semibold flex items-center gap-2">
-                      <Sparkles size={16} className="text-primary" /> Icône
+                      <Sparkles size={16} className="text-primary" /> {t("edit.iconAuto")}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Extraite automatiquement de la ROM au build.
+                      {t("edit.iconAutoText")}
                     </p>
                   </div>
                   <div className="p-4 border rounded-md bg-muted/50 space-y-2">
                     <p className="text-base font-semibold flex items-center gap-2">
-                      <Sparkles size={16} className="text-primary" /> Screenshots
+                      <Sparkles size={16} className="text-primary" /> {t("edit.shotsAuto")}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Téléchargés automatiquement (libretro) au build.
+                      {t("edit.shotsAutoText")}
                     </p>
                   </div>
                   <div className="p-4 border rounded-md bg-muted/50 space-y-2">
                     <p className="text-base font-semibold flex items-center gap-2">
-                      <Sparkles size={16} className="text-primary" /> Forwarder (.cia)
+                      <Sparkles size={16} className="text-primary" /> {t("edit.fwdAuto")}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Généré automatiquement à partir de la ROM au build.
+                      {t("edit.fwdAutoText")}
                     </p>
                   </div>
                 </>
               ) : (
                 <>
                   <FileUploader
-                    label="Icône (1 seul)"
+                    label={t("edit.iconLabel")}
                     accept=".png,.jpg,.jpeg"
                     type="icon"
                     uploading={uploading}
@@ -508,7 +505,7 @@ export default function EditGameForm() {
                     onUpload={handleUpload}
                   />
                   <FileUploader
-                    label="Screenshots (Multiples)"
+                    label={t("edit.shotsLabel")}
                     accept=".png,.jpg,.jpeg"
                     type="screenshot"
                     multiple={true}
@@ -518,7 +515,7 @@ export default function EditGameForm() {
                     onRemove={removeFile}
                   />
                   <FileUploader
-                    label="Forwarder (.cia)"
+                    label={t("edit.fwdLabel")}
                     accept=".cia"
                     type="cia"
                     uploading={uploading}
@@ -550,7 +547,7 @@ export default function EditGameForm() {
               className="w-full md:w-auto min-w-[200px] gap-2"
             >
               <Save size={18} />
-              {isNew ? "Créer le jeu" : "Mettre à jour"}
+              {isNew ? t("edit.create") : t("edit.update")}
             </Button>
           </div>
         </CardContent>

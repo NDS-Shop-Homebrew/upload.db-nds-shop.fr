@@ -1,0 +1,430 @@
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+
+type Lang = "fr" | "en";
+
+interface UIContextValue {
+  darkMode: boolean;
+  lang: Lang;
+  toggleDarkMode: () => void;
+  toggleLang: () => void;
+  t: (key: string) => string;
+}
+
+const UIContext = createContext<UIContextValue | null>(null);
+
+export function UIProvider({ children }: { children: ReactNode }) {
+  const [darkMode, setDarkMode] = useState<boolean>(() =>
+    localStorage.getItem("darkMode") === "true"
+  );
+  const [lang, setLang] = useState<Lang>(() =>
+    (localStorage.getItem("adminLang") as Lang) || "fr"
+  );
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", darkMode);
+    localStorage.setItem("darkMode", darkMode ? "true" : "false");
+  }, [darkMode]);
+
+  useEffect(() => {
+    document.documentElement.lang = lang;
+    localStorage.setItem("adminLang", lang);
+  }, [lang]);
+
+  const toggleDarkMode = () => setDarkMode((v) => !v);
+  const toggleLang = () => setLang((v) => (v === "fr" ? "en" : "fr"));
+
+  return (
+    <UIContext.Provider value={{ darkMode, lang, toggleDarkMode, toggleLang, t: (k) => translate(lang, k) }}>
+      {children}
+    </UIContext.Provider>
+  );
+}
+
+export function useUI() {
+  const ctx = useContext(UIContext);
+  if (!ctx) throw new Error("useUI must be used within UIProvider");
+  return ctx;
+}
+
+function translate(lang: Lang, key: string): string {
+  const table = lang === "fr" ? fr : en;
+  return table[key] ?? key;
+}
+
+// ---------------------------------------------------------------------------
+// Traductions centralisées (fr / en)
+// ---------------------------------------------------------------------------
+const fr: Record<string, string> = {
+  // Layout / navigation
+  "nav.dashboard": "Dashboard",
+  "nav.games": "Bibliothèque",
+  "nav.users": "Utilisateurs",
+  "nav.team": "Équipe",
+  "nav.build": "Build",
+  "nav.settings": "Paramètres",
+  "nav.logout": "Déconnexion",
+  "nav.backoffice": "Back-office",
+
+  // Login
+  "login.title": "Connexion",
+  "login.subtitle": "Connectez-vous pour accéder au back-office.",
+  "login.username": "Identifiant",
+  "login.usernamePh": "Votre identifiant",
+  "login.password": "Mot de passe",
+  "login.passwordPh": "••••••••",
+  "login.error": "Identifiants incorrects",
+  "login.serverError": "Erreur de connexion au serveur",
+  "login.loading": "Connexion en cours...",
+  "login.button": "Se connecter",
+  "login.reserved": "Accès réservé à l'équipe NDS-Shop",
+  "login.adminTitle": "Administration",
+  "login.tagline": "Espace d'administration du site NDS-Shop.",
+
+  // Dashboard
+  "dashboard.title": "Dashboard",
+  "dashboard.greeting": "Bonjour",
+  "dashboard.role": "rôle",
+  "dashboard.refresh": "Rafraîchir",
+  "dashboard.lastBuild": "Dernier build",
+  "dashboard.noBuild": "Aucun build effectué",
+  "dashboard.success": "Succès",
+  "dashboard.failed": "Échec",
+  "dashboard.viewLog": "Voir le log",
+  "dashboard.games": "Jeux",
+  "dashboard.users": "Utilisateurs",
+  "dashboard.forwarders": "Forwarders",
+  "dashboard.screenshots": "Screenshots",
+  "dashboard.downloads": "Téléchargements",
+  "dashboard.today": "Aujourd'hui",
+  "dashboard.topDownloads": "Top téléchargements (30 jours)",
+  "dashboard.statsError": "Erreur de chargement des statistiques",
+
+  // Users
+  "users.title": "Utilisateurs",
+  "users.subtitle": "Gérez les comptes de l'équipe.",
+  "users.create": "Créer un compte",
+  "users.createTitle": "Créer un utilisateur",
+  "users.username": "Identifiant",
+  "users.password": "Mot de passe",
+  "users.name": "Nom complet",
+  "users.email": "Email",
+  "users.role": "Rôle",
+  "users.status": "Statut",
+  "users.active": "Actif",
+  "users.banned": "Banni",
+  "users.actions": "Actions",
+  "users.edit": "Modifier",
+  "users.setPassword": "Mot de passe",
+  "users.ban": "Bannir",
+  "users.unban": "Débannir",
+  "users.delete": "Supprimer",
+  "users.created": "Utilisateur créé",
+  "users.updated": "Infos mises à jour",
+  "users.passwordUpdated": "Mot de passe mis à jour",
+  "users.deleted": "Utilisateur supprimé",
+  "users.confirmDelete": "Supprimer définitivement",
+  "users.cannotDeleteSelf": "Vous ne pouvez pas supprimer votre propre compte.",
+  "users.cannotBanSelf": "Vous ne pouvez pas bannir votre propre compte.",
+  "users.search": "Rechercher un utilisateur…",
+  "users.noResults": "Aucun utilisateur trouvé.",
+  "users.newPassword": "Nouveau mot de passe",
+  "users.save": "Enregistrer",
+  "users.cancel": "Annuler",
+
+  // Settings
+  "settings.title": "Paramètres",
+  "settings.subtitle": "Gérez votre profil, vos préférences et votre mot de passe.",
+  "settings.profile": "Profil",
+  "settings.username": "Identifiant",
+  "settings.usernameNote": "Ne peut pas être changé.",
+  "settings.name": "Nom complet",
+  "settings.namePh": "Votre nom complet",
+  "settings.email": "Email",
+  "settings.emailNote": "Fixé pour sécurité.",
+  "settings.changePassword": "Changer le mot de passe",
+  "settings.currentPassword": "Mot de passe actuel",
+  "settings.newPassword": "Nouveau mot de passe",
+  "settings.confirmPassword": "Confirmer le mot de passe",
+  "settings.passwordMismatch": "Les mots de passe ne correspondent pas.",
+  "settings.save": "Enregistrer",
+  "settings.passwordChanged": "Mot de passe changé avec succès.",
+  "settings.preferences": "Préférences",
+  "settings.darkMode": "Mode sombre",
+  "settings.language": "Langue",
+  "settings.saved": "Enregistré.",
+
+  // Team
+  "team.title": "Équipe",
+  "team.subtitle": "Sélectionnez les membres Discord affichés sur la page À propos.",
+  "team.save": "Enregistrer",
+  "team.refresh": "Actualiser",
+  "team.saved": "Équipe sauvegardée",
+  "team.search": "Rechercher un membre…",
+  "team.members": "membres",
+  "team.online": "en ligne",
+  "team.teamBadge": "Équipe",
+  "team.loading": "Chargement…",
+  "team.noMembers": "Aucun membre trouvé (vérifier le token Discord côté serveur).",
+  "team.noResults": "Aucun résultat.",
+
+  // Build
+  "build.title": "Build",
+  "build.subtitle": "Lancez un build du site et suivez sa progression en temps réel.",
+  "build.about": "À propos du build",
+  "build.aboutText": "Le build régénère automatiquement :",
+  "build.aboutIcons": "Les icônes extraites des ROMs",
+  "build.aboutBoxarts": "Les boxarts et screenshots (libretro)",
+  "build.aboutPages": "Les pages du site + games.json",
+  "build.aboutForwarders": "Les forwarders .cia (skippés si déjà générés)",
+  "build.launch": "Lancer le build",
+  "build.building": "Build en cours…",
+  "build.launched": "Build lancé.",
+  "build.status": "Statut",
+  "build.noBuild": "Aucun build effectué.",
+  "build.success": "Succès",
+  "build.failed": "Échec",
+  "build.log": "Log",
+  "build.viewLog": "Voir le log",
+
+  // Games
+  "games.title": "Bibliothèque de jeux",
+  "games.subtitle": "Gérez vos fichiers JSON et métadonnées.",
+  "games.search": "Rechercher par titre ou auteur...",
+  "games.add": "Ajouter un jeu",
+  "games.sortBy": "Trier par",
+  "games.sortOrder": "Ordre",
+  "games.titleCol": "Titre",
+  "games.authorCol": "Auteur",
+  "games.updatedCol": "Mise à jour",
+  "games.asc": "Croissant",
+  "games.desc": "Décroissant",
+  "games.noResults": "Aucun jeu trouvé.",
+  "games.edit": "Modifier",
+  "games.loading": "Chargement…",
+
+  // EditGame
+  "edit.loading": "Chargement des données du jeu...",
+  "edit.back": "Retour à la liste",
+  "edit.new": "Nouveau Jeu",
+  "edit.edit": "Éditer:",
+  "edit.description": "Remplissez les métadonnées et uploadez les fichiers nécessaires.",
+  "edit.title": "Titre du jeu *",
+  "edit.titlePh": "Ex: Pokémon Version Platine",
+  "edit.author": "Auteur / Éditeur",
+  "edit.authorPh": "Ex: Nintendo",
+  "edit.titleId": "Title ID",
+  "edit.titleIdAuto": "Rempli automatiquement par l'analyse de la ROM.",
+  "edit.categories": "Catégories",
+  "edit.systems": "Systèmes compatibles",
+  "edit.version": "Version / Région",
+  "edit.files": "Fichiers & Assets",
+  "edit.romLabel": "ROM du jeu (.nds)",
+  "edit.iconAuto": "Icône",
+  "edit.iconAutoText": "Extraite automatiquement de la ROM au build.",
+  "edit.shotsAuto": "Screenshots",
+  "edit.shotsAutoText": "Téléchargés automatiquement (libretro) au build.",
+  "edit.fwdAuto": "Forwarder (.cia)",
+  "edit.fwdAutoText": "Généré automatiquement à partir de la ROM au build.",
+  "edit.iconLabel": "Icône (1 seul)",
+  "edit.shotsLabel": "Screenshots (Multiples)",
+  "edit.fwdLabel": "Forwarder (.cia)",
+  "edit.create": "Créer le jeu",
+  "edit.update": "Mettre à jour",
+  "edit.analyzeFail": "Analyse ROM impossible",
+  "edit.loadFail": "Erreur lors du chargement du jeu",
+  "edit.loadDataFail": "Erreur de chargement",
+  "edit.uploadFail": "Erreur upload",
+  "edit.titleRequired": "Le titre est obligatoire",
+  "edit.exists": "Ce jeu existe déjà",
+  "edit.saved": "Jeu enregistré avec succès",
+  "edit.saveFail": "Erreur lors de la sauvegarde",
+
+  // NotFound
+  "notFound.title": "404",
+  "notFound.message": "Oups ! Page introuvable.",
+  "notFound.description": "La page que vous recherchez n'existe pas, a été supprimée ou a été déplacée.",
+  "notFound.back": "Retour à l'accueil",
+};
+
+const en: Record<string, string> = {
+  "nav.dashboard": "Dashboard",
+  "nav.games": "Library",
+  "nav.users": "Users",
+  "nav.team": "Team",
+  "nav.build": "Build",
+  "nav.settings": "Settings",
+  "nav.logout": "Log out",
+  "nav.backoffice": "Back-office",
+
+  "login.title": "Sign in",
+  "login.subtitle": "Sign in to access the back-office.",
+  "login.username": "Username",
+  "login.usernamePh": "Your username",
+  "login.password": "Password",
+  "login.passwordPh": "••••••••",
+  "login.error": "Invalid credentials",
+  "login.serverError": "Connection error",
+  "login.loading": "Signing in...",
+  "login.button": "Sign in",
+  "login.reserved": "Access reserved to the NDS-Shop team",
+  "login.adminTitle": "Administration",
+  "login.tagline": "Administration area of the NDS-Shop website.",
+
+  "dashboard.title": "Dashboard",
+  "dashboard.greeting": "Hello",
+  "dashboard.role": "role",
+  "dashboard.refresh": "Refresh",
+  "dashboard.lastBuild": "Last build",
+  "dashboard.noBuild": "No build yet",
+  "dashboard.success": "Success",
+  "dashboard.failed": "Failed",
+  "dashboard.viewLog": "View log",
+  "dashboard.games": "Games",
+  "dashboard.users": "Users",
+  "dashboard.forwarders": "Forwarders",
+  "dashboard.screenshots": "Screenshots",
+  "dashboard.downloads": "Downloads",
+  "dashboard.today": "Today",
+  "dashboard.topDownloads": "Top downloads (30 days)",
+  "dashboard.statsError": "Error loading statistics",
+
+  "users.title": "Users",
+  "users.subtitle": "Manage team accounts.",
+  "users.create": "Create account",
+  "users.createTitle": "Create user",
+  "users.username": "Username",
+  "users.password": "Password",
+  "users.name": "Full name",
+  "users.email": "Email",
+  "users.role": "Role",
+  "users.status": "Status",
+  "users.active": "Active",
+  "users.banned": "Banned",
+  "users.actions": "Actions",
+  "users.edit": "Edit",
+  "users.setPassword": "Password",
+  "users.ban": "Ban",
+  "users.unban": "Unban",
+  "users.delete": "Delete",
+  "users.created": "User created",
+  "users.updated": "Info updated",
+  "users.passwordUpdated": "Password updated",
+  "users.deleted": "User deleted",
+  "users.confirmDelete": "Permanently delete",
+  "users.cannotDeleteSelf": "You cannot delete your own account.",
+  "users.cannotBanSelf": "You cannot ban your own account.",
+  "users.search": "Search user…",
+  "users.noResults": "No user found.",
+  "users.newPassword": "New password",
+  "users.save": "Save",
+  "users.cancel": "Cancel",
+
+  "settings.title": "Settings",
+  "settings.subtitle": "Manage your profile, preferences and password.",
+  "settings.profile": "Profile",
+  "settings.username": "Username",
+  "settings.usernameNote": "Cannot be changed.",
+  "settings.name": "Full name",
+  "settings.namePh": "Your full name",
+  "settings.email": "Email",
+  "settings.emailNote": "Fixed for security.",
+  "settings.changePassword": "Change password",
+  "settings.currentPassword": "Current password",
+  "settings.newPassword": "New password",
+  "settings.confirmPassword": "Confirm password",
+  "settings.passwordMismatch": "Passwords do not match.",
+  "settings.save": "Save",
+  "settings.passwordChanged": "Password changed successfully.",
+  "settings.preferences": "Preferences",
+  "settings.darkMode": "Dark mode",
+  "settings.language": "Language",
+  "settings.saved": "Saved.",
+
+  "team.title": "Team",
+  "team.subtitle": "Select the Discord members shown on the About page.",
+  "team.save": "Save",
+  "team.refresh": "Refresh",
+  "team.saved": "Team saved",
+  "team.search": "Search member…",
+  "team.members": "members",
+  "team.online": "online",
+  "team.teamBadge": "Team",
+  "team.loading": "Loading…",
+  "team.noMembers": "No member found (check the Discord token server-side).",
+  "team.noResults": "No results.",
+
+  "build.title": "Build",
+  "build.subtitle": "Launch a site build and follow its progress in real time.",
+  "build.about": "About the build",
+  "build.aboutText": "The build automatically regenerates:",
+  "build.aboutIcons": "Icons extracted from ROMs",
+  "build.aboutBoxarts": "Boxarts and screenshots (libretro)",
+  "build.aboutPages": "Site pages + games.json",
+  "build.aboutForwarders": ".cia forwarders (skipped if already generated)",
+  "build.launch": "Launch build",
+  "build.building": "Building…",
+  "build.launched": "Build launched.",
+  "build.status": "Status",
+  "build.noBuild": "No build yet.",
+  "build.success": "Success",
+  "build.failed": "Failed",
+  "build.log": "Log",
+  "build.viewLog": "View log",
+
+  "games.title": "Game library",
+  "games.subtitle": "Manage your JSON files and metadata.",
+  "games.search": "Search by title or author...",
+  "games.add": "Add game",
+  "games.sortBy": "Sort by",
+  "games.sortOrder": "Order",
+  "games.titleCol": "Title",
+  "games.authorCol": "Author",
+  "games.updatedCol": "Updated",
+  "games.asc": "Ascending",
+  "games.desc": "Descending",
+  "games.noResults": "No game found.",
+  "games.edit": "Edit",
+  "games.loading": "Loading…",
+
+  // EditGame
+  "edit.loading": "Loading game data...",
+  "edit.back": "Back to list",
+  "edit.new": "New Game",
+  "edit.edit": "Edit:",
+  "edit.description": "Fill in the metadata and upload the required files.",
+  "edit.title": "Game title *",
+  "edit.titlePh": "e.g. Pokémon Platinum Version",
+  "edit.author": "Author / Publisher",
+  "edit.authorPh": "e.g. Nintendo",
+  "edit.titleId": "Title ID",
+  "edit.titleIdAuto": "Auto-filled by the ROM analysis.",
+  "edit.categories": "Categories",
+  "edit.systems": "Supported systems",
+  "edit.version": "Version / Region",
+  "edit.files": "Files & Assets",
+  "edit.romLabel": "Game ROM (.nds)",
+  "edit.iconAuto": "Icon",
+  "edit.iconAutoText": "Extracted automatically from the ROM at build.",
+  "edit.shotsAuto": "Screenshots",
+  "edit.shotsAutoText": "Downloaded automatically (libretro) at build.",
+  "edit.fwdAuto": "Forwarder (.cia)",
+  "edit.fwdAutoText": "Generated automatically from the ROM at build.",
+  "edit.iconLabel": "Icon (1 only)",
+  "edit.shotsLabel": "Screenshots (Multiple)",
+  "edit.fwdLabel": "Forwarder (.cia)",
+  "edit.create": "Create game",
+  "edit.update": "Update",
+  "edit.analyzeFail": "ROM analysis failed",
+  "edit.loadFail": "Error loading game",
+  "edit.loadDataFail": "Loading error",
+  "edit.uploadFail": "Upload error",
+  "edit.titleRequired": "Title is required",
+  "edit.exists": "This game already exists",
+  "edit.saved": "Game saved successfully",
+  "edit.saveFail": "Error while saving",
+
+  "notFound.title": "404",
+  "notFound.message": "Oops! Page not found.",
+  "notFound.description": "The page you are looking for does not exist, was deleted or moved.",
+  "notFound.back": "Back to home",
+};

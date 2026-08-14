@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { CheckCircle2, XCircle, Loader2, RefreshCw, Rocket } from "lucide-react";
+import { useUI } from "../context/UIContext";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
 
@@ -32,7 +33,6 @@ function detectSteps(log: string): { current: string | null; completed: string[]
       current = step;
     }
   }
-  // Si le log contient "Build terminé", tout est complété
   if (log.includes("Build terminé")) current = null;
   return { current, completed };
 }
@@ -43,6 +43,7 @@ function countProgress(steps: { current: string | null; completed: string[] }): 
 }
 
 export default function BuildStatus({ onTriggered }: BuildStatusProps) {
+  const { t } = useUI();
   const [data, setData] = useState<BuildStatusData | null>(null);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,29 +52,24 @@ export default function BuildStatus({ onTriggered }: BuildStatusProps) {
 
   const fetchStatus = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(`${API_URL}/api/build/status`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
+      const res = await fetch(`${API_URL}/api/build/status`, { credentials: "include" });
       if (!res.ok) throw new Error(await res.text());
       const d = await res.json();
       setData(d.status === "none" ? null : d);
       setError(null);
     } catch (err: any) {
-      setError(err.message || "Erreur");
+      setError(err.message || t("build.status"));
     }
   };
 
   useEffect(() => {
     fetchStatus();
-    // Poll rapide pendant un build (2s), sinon 5s
     timerRef.current = setInterval(fetchStatus, 2000);
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
 
-  // Auto-scroll du log vers le bas
   useEffect(() => {
     if (logRef.current) {
       logRef.current.scrollTop = logRef.current.scrollHeight;
@@ -84,14 +80,13 @@ export default function BuildStatus({ onTriggered }: BuildStatusProps) {
     setStarting(true);
     setError(null);
     try {
-      const token = localStorage.getItem("token");
       const res = await fetch(`${API_URL}/api/build`, {
         method: "POST",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: "include",
       });
       if (!res.ok) {
         const d = await res.json().catch(() => null);
-        throw new Error(d?.error || "Erreur");
+        throw new Error(d?.error || t("build.launch"));
       }
       onTriggered();
       setTimeout(fetchStatus, 1000);
@@ -112,18 +107,18 @@ export default function BuildStatus({ onTriggered }: BuildStatusProps) {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0">
         <CardTitle className="text-lg flex items-center gap-2">
-          <Rocket size={18} /> Build du site
+          <Rocket size={18} /> {t("build.title")}
         </CardTitle>
         <Button onClick={triggerBuild} disabled={starting || running} className="gap-2" size="sm">
-          {running ? <Loader2 size={16} className="animate-spin" /> : starting ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
-          {running ? "Build en cours…" : starting ? "Lancement…" : "Lancer le build"}
+          {running || starting ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+          {running ? t("build.building") : starting ? t("build.launch") + "…" : t("build.launch")}
         </Button>
       </CardHeader>
       <CardContent className="space-y-4">
         {error && <p className="text-sm text-red-600">{error}</p>}
 
         {!data && !error && (
-          <p className="text-sm text-muted-foreground">Aucun build lancé récemment.</p>
+          <p className="text-sm text-muted-foreground">{t("build.noBuild")}</p>
         )}
 
         {data && (
@@ -132,18 +127,17 @@ export default function BuildStatus({ onTriggered }: BuildStatusProps) {
               {finished && <CheckCircle2 size={20} className="text-green-600 shrink-0" />}
               {failed && <XCircle size={20} className="text-red-600 shrink-0" />}
               {running && <Loader2 size={20} className="animate-spin text-blue-600 shrink-0" />}
-              <span className="font-medium capitalize">{data.status}</span>
+              <span className="font-medium capitalize">{data.status === "success" ? t("build.success") : data.status === "failed" ? t("build.failed") : data.status}</span>
               {data.startedAt && (
                 <span className="text-muted-foreground text-xs">
-                  début {new Date(data.startedAt).toLocaleTimeString()}
+                  {new Date(data.startedAt).toLocaleTimeString()}
                   {data.finishedAt && (
-                    <> · fin {new Date(data.finishedAt).toLocaleTimeString()}</>
+                    <> · {new Date(data.finishedAt).toLocaleTimeString()}</>
                   )}
                 </span>
               )}
             </div>
 
-            {/* Progression par étapes */}
             {running && (
               <div className="space-y-1.5">
                 <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
@@ -160,7 +154,7 @@ export default function BuildStatus({ onTriggered }: BuildStatusProps) {
                   ))}
                 </div>
                 {steps.current && (
-                  <p className="text-xs text-muted-foreground">Étape en cours : {steps.current}</p>
+                  <p className="text-xs text-muted-foreground">{steps.current}</p>
                 )}
               </div>
             )}
