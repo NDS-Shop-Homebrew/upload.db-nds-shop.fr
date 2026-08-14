@@ -77,3 +77,35 @@ model Verification {
   @@index([identifier(length: 191)])
   @@map("verification")
 }
+
+// ---- Bot Discord NDS-Shop (dashboard) ----
+// Tables partagées avec le bot (NDS-Shop-Bot), même base de données.
+
+model BotAnnouncement {
+  id        String    @id @default(cuid())
+  title     String    @db.Text
+  content   String    @db.Text
+  channel   String    @db.Text
+  status    String    @default("draft") // draft | sent
+  createdAt DateTime  @default(now())
+  sentAt    DateTime?
+  sentBy    String?   @db.Text
+
+  @@map("bot_announcement")
+}
+
+model BotSetting {
+  key   String @id
+  value String @db.Text
+
+  @@map("bot_setting")
+}
+
+model BotLog {
+  id        String   @id @default(cuid())
+  level     String   @default("info")
+  message   String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@map("bot_log")
+}
