@@ -112,6 +112,7 @@ export default function EditGameForm() {
         publisher: meta.publisher || prev.publisher || "",
         genres: meta.genres?.length ? meta.genres : prev.genres || [],
         description: prev.description || meta.description || meta.description_en || meta.description_fr || "",
+        icon: prev.icon || meta.icon || "",
       }));
       if (meta.titleId)
         setMessage({
