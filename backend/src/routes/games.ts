@@ -6,7 +6,6 @@ import { requireAuth } from "../middleware/auth.ts";
 
 const router = express.Router();
 const GAMES_PATH = process.env.GAMES_PATH!;
-const FORWARDER_PATH = process.env.FORWARDER_PATH!;
 const GIT_REPO_PATH = process.env.GIT_REPO_PATH || "";
 
 const formatDate = () =>
@@ -18,29 +17,32 @@ const generateScripts = (downloads: any, screenshots: any[] = []) => {
     .filter((name) => name.endsWith(".nds"))
     .forEach((ndsName) => {
       const script: any[] = [];
-      screenshots.forEach((s) => {
-        script.push({
-          type: "downloadFile",
-          file: s.url,
-          output: `/_nds/TwiLightMenu/boxart/${ndsName}.png`,
-        });
+      // URL construites depuis le nom de fichier (convention uploads.ts), pas les URLs stockées
+      const boxart =
+        screenshots.find((s) => s.url.includes("/boxart/")) ||
+        screenshots[screenshots.length - 1];
+      script.push({
+        type: "downloadFile",
+        file: boxart
+          ? boxart.url
+          : `https://db-nds-shop.fr/assets/images/boxart/${encodeURIComponent(ndsName)}.png`,
+        output: `/_nds/TwiLightMenu/boxart/${ndsName}.png`,
       });
       script.push({
         type: "downloadFile",
-        file: downloads[ndsName].url,
-        output: `/${ndsName}`,
+        file: `https://db-nds-shop.fr/games/${encodeURIComponent(ndsName)}`,
+        output: `/roms/nds/${ndsName}`,
       });
 
       const ciaName = ndsName.replace(/\.nds$/i, ".cia");
-      if (fs.existsSync(path.join(FORWARDER_PATH, ciaName))) {
-        script.push({
-          type: "downloadFile",
-          file: `https://db-nds-shop.fr/forwarder/${encodeURIComponent(ciaName)}`,
-          output: `/${ciaName}`,
-        });
-        script.push({ type: "installCia", file: `/${ciaName}` });
-        script.push({ type: "deleteFile", file: `/${ciaName}` });
-      }
+      // ponytail: forwarder toujours présent (généré par le build pour chaque .nds)
+      script.push({
+        type: "downloadFile",
+        file: `https://db-nds-shop.fr/forwarder/${encodeURIComponent(ciaName)}`,
+        output: `/${ciaName}`,
+      });
+      script.push({ type: "installCia", file: `/${ciaName}` });
+      script.push({ type: "deleteFile", file: `/${ciaName}` });
       scripts[ndsName] = script;
     });
   return scripts;
