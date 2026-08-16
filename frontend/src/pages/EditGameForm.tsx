@@ -44,6 +44,7 @@ const availableSystems = ["DS", "3DS"];
 const availableVersions = [
   "(Europe)",
   "(Europe) (En,Fr,De,Es,It)",
+  "(France)",
   "(USA)",
   "(Japan)",
 ];
