@@ -18,7 +18,7 @@ const createStorage = (dest: string) =>
   multer.diskStorage({
     destination: dest,
     filename: (req, file, cb) => {
-      const safeName = file.originalname.replace(/\s+/g, "_");
+      const safeName = file.originalname.replace(/[\\/:*?"<>|]/g, "").trim();
       cb(null, safeName);
     },
   });
