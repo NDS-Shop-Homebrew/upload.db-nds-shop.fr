@@ -65,7 +65,7 @@ const upload = {
 router.post("/icon", upload.icon.single("icon"), (req, res) => {
   if (!req.file) return res.status(400).json({ error: "Aucun fichier reçu" });
   res.json({
-    url: `https://db-nds-shop.fr/assets/images/icons/${req.file.filename}`,
+    url: `https://db-nds-shop.fr/assets/images/icons/${encodeURIComponent(req.file.filename)}`,
     name: req.file.filename,
   });
 });

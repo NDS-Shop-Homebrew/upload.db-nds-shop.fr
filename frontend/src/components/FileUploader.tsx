@@ -1,6 +1,7 @@
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { UploadCloud } from "lucide-react";
+import SafeImg from "./SafeImg";
 
 interface FileItem {
   id: string;
@@ -20,6 +21,9 @@ interface FileUploaderProps {
   ) => void;
   onRemove?: (type: "screenshot" | "nds", identifier: string) => void;
 }
+
+const isImage = (type: "icon" | "screenshot" | "nds" | "cia") =>
+  type === "icon" || type === "screenshot";
 
 export function FileUploader({
   label,
@@ -54,9 +58,19 @@ export function FileUploader({
           {items.map((item) => (
             <div
               key={item.id}
-              className="flex items-center gap-2 px-3 py-1 bg-background border rounded-full text-sm"
+              className={`flex items-center gap-2 bg-background border rounded-lg ${
+                isImage(type) ? "px-2 py-1.5" : "px-3 py-1 rounded-full text-sm"
+              }`}
             >
-              <span className="truncate max-w-[200px]" title={item.display}>
+              {isImage(type) && (
+                <SafeImg
+                  src={item.id}
+                  alt={item.display}
+                  className="w-10 h-10 rounded object-cover ring-1 ring-border shrink-0"
+                  wrapperClassName="w-10 h-10 rounded bg-muted shrink-0"
+                />
+              )}
+              <span className="truncate max-w-[180px]" title={item.display}>
                 {item.display}
               </span>
               {onRemove && (type === "screenshot" || type === "nds") && (

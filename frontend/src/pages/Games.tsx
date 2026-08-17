@@ -3,7 +3,8 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Link } from "react-router-dom";
-import { Search, Plus, Edit, Image as ImageIcon } from "lucide-react";
+import { Search, Plus, Edit } from "lucide-react";
+import SafeImg from "../components/SafeImg";
 import { useUI } from "../context/UIContext";
 
 interface Game {
@@ -21,6 +22,14 @@ type SortKey = "title" | "author" | "updated";
 type SortOrder = "asc" | "desc";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
+
+function gameBoxart(game: Game) {
+  return (
+    game.screenshots?.find((s) => s.description === "Boxart")?.url ||
+    game.screenshots?.[0]?.url ||
+    game.icon
+  );
+}
 
 function CompletionBadge({ ok, label }: { ok: boolean; label: string }) {
   return (
@@ -139,7 +148,7 @@ export default function Games() {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="animate-pulse rounded-xl border border-border p-4">
-              <div className="w-20 h-20 mx-auto rounded-lg bg-muted mb-3" />
+              <div className="aspect-[4/3] rounded-lg bg-muted mb-3" />
               <div className="h-4 w-3/4 rounded bg-muted mb-2 mx-auto" />
               <div className="h-3 w-1/2 rounded bg-muted mx-auto" />
             </div>
@@ -152,14 +161,13 @@ export default function Games() {
             const hasShot = game.screenshots?.some((s) => s.description !== "Boxart");
             return (
               <div key={game.fileName} className="rounded-xl border border-border bg-card p-4 hover:shadow-md transition-shadow">
-                <div className="rounded-lg overflow-hidden bg-muted mb-3 ring-1 ring-border">
-                  {game.icon ? (
-                    <img src={game.icon} alt="" className="w-20 h-20 mx-auto object-contain" />
-                  ) : (
-                    <div className="w-20 h-20 mx-auto flex items-center justify-center text-muted-foreground">
-                      <ImageIcon size={28} />
-                    </div>
-                  )}
+                <div className="rounded-lg overflow-hidden bg-muted mb-3 ring-1 ring-border aspect-[4/3]">
+                  <SafeImg
+                    src={gameBoxart(game)}
+                    alt={game.title}
+                    className="w-full h-full object-cover"
+                    wrapperClassName="w-full h-full"
+                  />
                 </div>
                 <h3 className="font-semibold text-sm line-clamp-2 leading-snug">{game.title}</h3>
                 <p className="text-xs text-muted-foreground mt-1 truncate">{game.author}</p>
