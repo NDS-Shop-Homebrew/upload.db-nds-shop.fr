@@ -1,7 +1,7 @@
 import { Outlet, NavLink, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import {
-  LayoutDashboard, Gamepad2, Users, UsersRound, Hammer, Settings, LogOut, Menu, X,
+  LayoutDashboard, Gamepad2, Users, UsersRound, Hammer, Settings, LogOut, Menu, X, PanelLeftClose, PanelLeftOpen,
 } from "lucide-react";
 import { DarkModeToggle } from "./DarkModeToggle";
 import { LangToggle } from "./LangToggle";
@@ -14,12 +14,17 @@ export default function Layout() {
   const { user, logout } = useAuth();
   const { t } = useUI();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem("uploadNavCollapsed") === "1");
   const location = useLocation();
   const isAdmin = user?.role === "admin";
 
   useEffect(() => {
     setSidebarOpen(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    localStorage.setItem("uploadNavCollapsed", collapsed ? "1" : "0");
+  }, [collapsed]);
 
   const navItems = [
     { to: "/dashboard", label: t("nav.dashboard"), icon: LayoutDashboard, adminOnly: false },
@@ -35,52 +40,75 @@ export default function Layout() {
   return (
     <div className="min-h-screen flex bg-muted/30">
       {/* Sidebar desktop */}
-      <aside className="hidden lg:flex flex-col w-60 bg-card border-r border-border shrink-0 sticky top-0 h-screen">
-        <div className="flex items-center gap-2 px-5 h-16 border-b border-border">
-          <img src="/logo.png" alt="NDS-Shop" className="w-8 h-8 rounded-lg" />
-          <div className="min-w-0">
-            <p className="font-bold leading-tight truncate">NDS-Shop</p>
-            <p className="text-xs text-muted-foreground">{t("nav.backoffice")}</p>
-          </div>
+      <aside className={cn("hidden lg:flex flex-col bg-card border-r border-border shrink-0 sticky top-0 h-screen transition-all duration-200", collapsed ? "w-16" : "w-60")}>
+        <div className={cn("flex items-center gap-2 px-5 h-16 border-b border-border", collapsed && "justify-center px-0")}>
+          <img src="/logo.png" alt="NDS-Shop" className="w-8 h-8 rounded-lg shrink-0" />
+          {!collapsed && (
+            <div className="min-w-0">
+              <p className="font-bold leading-tight truncate">NDS-Shop</p>
+              <p className="text-xs text-muted-foreground">{t("nav.backoffice")}</p>
+            </div>
+          )}
         </div>
         <nav className="flex-1 py-4 px-3 space-y-1">
           {visibleNav.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
+              title={collapsed ? item.label : undefined}
               className={({ isActive }) =>
                 cn(
                   "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
                   isActive
                     ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  collapsed && "justify-center px-0"
                 )
               }
             >
-              <item.icon size={18} />
-              {item.label}
+              <item.icon size={18} className="shrink-0" />
+              {!collapsed && item.label}
             </NavLink>
           ))}
         </nav>
         <div className="p-3 border-t border-border space-y-2">
-          <div className="flex items-center gap-2 px-2">
-            <div className="flex-1 flex items-center gap-2">
+          {!collapsed && (
+            <div className="flex items-center gap-2 px-2">
+              <div className="flex-1 flex items-center gap-2">
+                <div className="w-9 h-9 rounded-full bg-primary/15 text-primary flex items-center justify-center font-bold">
+                  {user?.username?.slice(0, 2).toUpperCase() || "?"}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">{user?.username}</p>
+                  <Badge variant={isAdmin ? "default" : "secondary"} className="mt-0.5">
+                    {user?.role}
+                  </Badge>
+                </div>
+              </div>
+              <DarkModeToggle />
+              <button onClick={logout} className="p-2 rounded-lg text-muted-foreground hover:text-destructive transition-colors" title={t("nav.logout")}>
+                <LogOut size={18} />
+              </button>
+            </div>
+          )}
+          {collapsed && (
+            <div className="flex flex-col items-center gap-2">
               <div className="w-9 h-9 rounded-full bg-primary/15 text-primary flex items-center justify-center font-bold">
                 {user?.username?.slice(0, 2).toUpperCase() || "?"}
               </div>
-              <div className="min-w-0">
-                <p className="text-sm font-medium truncate">{user?.username}</p>
-                <Badge variant={isAdmin ? "default" : "secondary"} className="mt-0.5">
-                  {user?.role}
-                </Badge>
-              </div>
+              <button onClick={logout} className="p-2 rounded-lg text-muted-foreground hover:text-destructive transition-colors" title={t("nav.logout")}>
+                <LogOut size={18} />
+              </button>
             </div>
-            <DarkModeToggle />
-            <button onClick={logout} className="p-2 rounded-lg text-muted-foreground hover:text-destructive transition-colors" title={t("nav.logout")}>
-              <LogOut size={18} />
-            </button>
-          </div>
+          )}
         </div>
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className="absolute top-16 -right-3 z-10 p-1 rounded-full bg-card border border-border text-muted-foreground hover:text-foreground shadow"
+          title={collapsed ? "Déplier" : "Replier"}
+        >
+          {collapsed ? <PanelLeftOpen size={14} /> : <PanelLeftClose size={14} />}
+        </button>
       </aside>
 
       {/* Topbar mobile */}
