@@ -17,7 +17,6 @@ const generateScripts = (downloads: any, screenshots: any[] = []) => {
     .filter((name) => name.endsWith(".nds"))
     .forEach((ndsName) => {
       const script: any[] = [];
-      // URL construites depuis le nom de fichier (convention uploads.ts), pas les URLs stockées
       const boxart =
         screenshots.find((s) => s.url.includes("/boxart/")) ||
         screenshots[screenshots.length - 1];
@@ -35,7 +34,6 @@ const generateScripts = (downloads: any, screenshots: any[] = []) => {
       });
 
       const ciaName = ndsName.replace(/\.nds$/i, ".cia");
-      // ponytail: forwarder toujours présent (généré par le build pour chaque .nds)
       script.push({
         type: "downloadFile",
         file: `https://db-nds-shop.fr/forwarder/${encodeURIComponent(ciaName)}`,
