@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
-import { UsersRound, Save, Search, RefreshCw } from "lucide-react";
+import { Input } from "../components/ui/input";
+import { UsersRound, Save, Search, RefreshCw, ChevronUp, ChevronDown, X } from "lucide-react";
 import { useUI } from "../context/UIContext";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
@@ -14,6 +15,11 @@ interface DiscordMember {
   avatar: string | null;
   nick: string | null;
   roles: string[];
+}
+
+interface TeamMember {
+  id: string;
+  role: string;
 }
 
 interface Guild {
@@ -29,12 +35,14 @@ export default function Team() {
   const { t } = useUI();
   const [members, setMembers] = useState<DiscordMember[]>([]);
   const [guild, setGuild] = useState<Guild | null>(null);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [team, setTeam] = useState<TeamMember[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+
+  const memberOf = (id: string) => members.find((m) => m.id === id);
 
   const load = async () => {
     setLoading(true);
@@ -50,7 +58,7 @@ export default function Team() {
       const team = await teamRes.json();
       const guild = g?.ok ? await g.json() : null;
       setMembers(members);
-      setSelected(new Set(team.discordIds || []));
+      setTeam(team.members || []);
       setGuild(guild);
     } catch (e: any) {
       setError(e.message || t("team.loading"));
@@ -61,11 +69,26 @@ export default function Team() {
 
   useEffect(() => { load(); }, []);
 
-  const toggle = (id: string) => {
-    const next = new Set(selected);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setSelected(next);
+  const add = (id: string) => {
+    setTeam((prev) => [...prev, { id, role: "" }]);
+  };
+
+  const remove = (id: string) => {
+    setTeam((prev) => prev.filter((m) => m.id !== id));
+  };
+
+  const setRole = (id: string, role: string) => {
+    setTeam((prev) => prev.map((m) => (m.id === id ? { ...m, role } : m)));
+  };
+
+  const move = (index: number, dir: -1 | 1) => {
+    setTeam((prev) => {
+      const next = [...prev];
+      const j = index + dir;
+      if (j < 0 || j >= next.length) return prev;
+      [next[index], next[j]] = [next[j], next[index]];
+      return next;
+    });
   };
 
   const save = async () => {
@@ -76,7 +99,7 @@ export default function Team() {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ discordIds: [...selected] }),
+        body: JSON.stringify({ members: team }),
       });
       if (!r.ok) throw new Error(await r.text());
       setMsg({ text: t("team.saved"), ok: true });
@@ -87,14 +110,12 @@ export default function Team() {
     }
   };
 
-  const filtered = members.filter((m) =>
-    `${m.global_name} ${m.username} ${m.nick || ""}`.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const sorted = [...filtered].sort((a, b) => {
-    if (selected.has(a.id) !== selected.has(b.id)) return selected.has(a.id) ? -1 : 1;
-    return a.global_name.localeCompare(b.global_name);
-  });
+  const searchable = members.filter((m) => {
+    if (team.some((x) => x.id === m.id)) return false;
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return `${m.global_name} ${m.username} ${m.nick || ""}`.toLowerCase().includes(q);
+  }).slice(0, 100);
 
   return (
     <div className="p-6 md:p-8 w-full max-w-6xl mx-auto space-y-6">
@@ -103,9 +124,7 @@ export default function Team() {
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <UsersRound className="w-6 h-6 text-primary" /> {t("team.title")}
           </h1>
-          <p className="text-muted-foreground text-sm">
-            {t("team.subtitle")}
-          </p>
+          <p className="text-muted-foreground text-sm">{t("team.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" onClick={load} className="gap-1.5">
@@ -127,6 +146,7 @@ export default function Team() {
                 {guild.memberCount ?? "?"} membres · {guild.presenceCount ?? "?"} en ligne
               </p>
             </div>
+            <span className="ml-auto text-sm text-muted-foreground">{team.length} membre{team.length > 1 ? "s" : ""}</span>
           </CardContent>
         </Card>
       )}
@@ -138,52 +158,91 @@ export default function Team() {
         </p>
       )}
 
-      <div className="relative max-w-md">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder={t("team.search")}
-          className="h-10 w-full rounded-lg border border-input bg-background pl-9 pr-3 text-sm"
-        />
-      </div>
-
       {loading ? (
         <p className="text-muted-foreground text-sm">{t("team.loading")}</p>
       ) : (
-        <Card>
-          <CardContent className="p-0">
-            <div className="max-h-[560px] overflow-y-auto">
-              {sorted.map((m) => {
-                const on = selected.has(m.id);
+        <>
+          {/* Équipe actuelle */}
+          <Card>
+            <CardContent className="p-4 space-y-3">
+              <h2 className="font-semibold">{t("team.members")} — {team.length}</h2>
+              {team.length === 0 && <p className="text-sm text-muted-foreground">{t("team.noMembers")}</p>}
+              {team.map((tm, i) => {
+                const d = memberOf(tm.id);
                 return (
+                  <div key={tm.id} className="flex items-center gap-3 p-3 rounded-lg border border-border">
+                    {d?.avatar
+                      ? <img src={d.avatar} alt={d.global_name} className="w-10 h-10 rounded-full shrink-0" />
+                      : <div className="w-10 h-10 rounded-full bg-primary/15 text-primary flex items-center justify-center font-bold shrink-0">
+                          {(d?.global_name || d?.username || "?").slice(0, 1)}
+                        </div>}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">{d?.global_name || d?.username || tm.id}</p>
+                      {d && d.nick && d.nick !== d.global_name && (
+                        <p className="text-xs text-muted-foreground truncate">{d.nick}</p>
+                      )}
+                    </div>
+                    <Input
+                      value={tm.role}
+                      onChange={(e) => setRole(tm.id, e.target.value)}
+                      placeholder="Rôle (Fondateur, Admin…)"
+                      className="max-w-[200px] h-9 text-sm"
+                    />
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Button size="sm" variant="ghost" onClick={() => move(i, -1)} disabled={i === 0} title="Monter">
+                        <ChevronUp size={16} />
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => move(i, 1)} disabled={i === team.length - 1} title="Descendre">
+                        <ChevronDown size={16} />
+                      </Button>
+                      <Button size="sm" variant="ghost" className="text-destructive" onClick={() => remove(tm.id)} title="Retirer">
+                        <X size={16} />
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+
+          {/* Ajouter un membre */}
+          <Card>
+            <CardContent className="p-4 space-y-3">
+              <div className="relative max-w-md">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder={t("team.search")}
+                  className="pl-9"
+                />
+              </div>
+              <div className="max-h-[320px] overflow-y-auto space-y-1">
+                {searchable.length === 0 && (
+                  <p className="p-4 text-center text-sm text-muted-foreground">
+                    {members.length === 0 ? t("team.noMembers") : t("team.noResults")}
+                  </p>
+                )}
+                {searchable.map((m) => (
                   <button
                     key={m.id}
-                    onClick={() => toggle(m.id)}
-                    className={`w-full flex items-center gap-3 px-4 py-2.5 border-b border-border/50 last:border-b-0 text-left transition-colors ${on ? "bg-primary/5" : "hover:bg-muted/30"}`}
+                    onClick={() => { add(m.id); setSearch(""); }}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors hover:bg-muted/30 border border-transparent hover:border-border"
                   >
                     {m.avatar
-                      ? <img src={m.avatar} alt={m.global_name} className="w-9 h-9 rounded-full shrink-0" />
-                      : <div className="w-9 h-9 rounded-full bg-primary/15 text-primary flex items-center justify-center font-bold shrink-0">{m.global_name.slice(0, 1)}</div>}
+                      ? <img src={m.avatar} alt={m.global_name} className="w-8 h-8 rounded-full shrink-0" />
+                      : <div className="w-8 h-8 rounded-full bg-primary/15 text-primary flex items-center justify-center font-bold shrink-0">{m.global_name.slice(0, 1)}</div>}
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium truncate">{m.global_name}</p>
                       <p className="text-xs text-muted-foreground truncate">{m.nick || m.username}</p>
                     </div>
-                    {on && <Badge>{t("team.teamBadge")}</Badge>}
-                    <div className={`w-5 h-5 rounded border flex items-center justify-center shrink-0 ${on ? "bg-primary border-primary text-primary-foreground" : "border-input"}`}>
-                      {on && <span className="text-xs">✓</span>}
-                    </div>
+                    {m.roles?.length > 0 && <Badge variant="outline" className="shrink-0 text-[10px]">{m.roles.length} rôle{m.roles.length > 1 ? "s" : ""}</Badge>}
                   </button>
-                );
-              })}
-              {sorted.length === 0 && (
-                <p className="p-6 text-center text-sm text-muted-foreground">
-                  {members.length === 0 ? t("team.noMembers") : t("team.noResults")}
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </>
       )}
     </div>
   );

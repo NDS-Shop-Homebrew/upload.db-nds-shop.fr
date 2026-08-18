@@ -15,7 +15,7 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 
 function AdminRoute({ children }: { children: JSX.Element }) {
   const { user } = useAuth();
-  if (user?.role !== "admin") return <Navigate to="/dashboard" replace />;
+  if (user?.role !== "admin" && user?.role !== "super-admin") return <Navigate to="/dashboard" replace />;
   return children;
 }
 

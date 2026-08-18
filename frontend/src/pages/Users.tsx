@@ -22,7 +22,7 @@ interface AdminUser {
 const API_URL = import.meta.env.VITE_API_URL || "";
 
 export default function Users() {
-  const { user: me } = useAuth();
+  const { user: me, isSuperAdmin } = useAuth();
   const { t } = useUI();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -170,14 +170,16 @@ export default function Users() {
                     </td>
                     <td className="p-3 hidden md:table-cell text-muted-foreground">{u.email}</td>
                     <td className="p-3">
-                      {u.role === "admin" ? (
+                      {u.role === "admin" || u.role === "super-admin" ? (
                         <Badge>{u.role}</Badge>
-                      ) : (
+                      ) : isSuperAdmin ? (
                         <select value={u.role} onChange={(e) => setRole(u.id, e.target.value)}
                           className="h-8 rounded border border-input bg-background px-2 text-xs">
                           <option value="member">member</option>
                           <option value="admin">admin</option>
                         </select>
+                      ) : (
+                        <Badge variant="secondary">member</Badge>
                       )}
                     </td>
                     <td className="p-3">
@@ -187,7 +189,7 @@ export default function Users() {
                       <Button size="sm" variant="outline" onClick={() => { setEditUser(u); setEditName(u.name || u.username); }} title={t("users.edit")}>
                         <Pencil size={13} />
                       </Button>
-                      {u.role !== "admin" && (
+                      {u.role !== "admin" && u.role !== "super-admin" && (
                         <>
                           <Button size="sm" variant="outline" onClick={() => { setPwdUser(u); setNewPassword(""); }} title={t("users.setPassword")}>
                             <Lock size={13} />
@@ -195,10 +197,12 @@ export default function Users() {
                           <Button size="sm" variant="outline" onClick={() => banUser(u)} title={u.banned ? t("users.unban") : t("users.ban")}>
                             <Ban size={13} />
                           </Button>
-                          <Button size="sm" variant="outline" className="text-destructive" onClick={() => removeUser(u)} title={t("users.delete")}>
-                            <Trash2 size={13} />
-                          </Button>
                         </>
+                      )}
+                      {isSuperAdmin && u.id !== me?.id && (
+                        <Button size="sm" variant="outline" className="text-destructive" onClick={() => removeUser(u)} title={t("users.delete")}>
+                          <Trash2 size={13} />
+                        </Button>
                       )}
                     </td>
                   </tr>
