@@ -208,22 +208,39 @@ router.get("/discord/members", requireAdmin, async (_req, res) => {
 router.get("/discord/team", requireAdmin, (_req, res) => {
   try {
     if (!fs.existsSync(TEAM_MEMBERS_FILE))
-      return res.json({ discordIds: [], updatedAt: null });
+      return res.json({ members: [], updatedAt: null });
     const data = JSON.parse(fs.readFileSync(TEAM_MEMBERS_FILE, "utf8"));
+    // Rétrocompat : ancien format { discordIds: [] }
+    if (Array.isArray(data.discordIds)) {
+      return res.json({
+        members: data.discordIds.map((id: string) => ({ id, role: "" })),
+        updatedAt: data.updatedAt ?? null,
+      });
+    }
     res.json(data);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// POST /api/admin/discord/team — sauvegarde la sélection
+// POST /api/admin/discord/team — sauvegarde la sélection (membres + rôles, ordre préservé)
 router.post("/discord/team", requireAdmin, (req, res) => {
   try {
-    const { discordIds } = req.body || {};
-    if (!Array.isArray(discordIds)) {
-      return res.status(400).json({ error: "discordIds (array) requis" });
+    const { members } = req.body || {};
+    if (!Array.isArray(members)) {
+      return res.status(400).json({ error: "members (array) requis" });
     }
-    const data = { discordIds, updatedAt: new Date().toISOString() };
+    const clean = members
+      .map((m: any) => ({
+        id: typeof m?.id === "string" ? m.id : "",
+        role: typeof m?.role === "string" ? m.role.trim() : "",
+      }))
+      .filter((m: { id: string }) => m.id)
+      .filter(
+        (m: { id: string }, i: number, arr: { id: string }[]) =>
+          arr.findIndex((x) => x.id === m.id) === i
+      );
+    const data = { members: clean, updatedAt: new Date().toISOString() };
     fs.mkdirSync(path.dirname(TEAM_MEMBERS_FILE), { recursive: true });
     fs.writeFileSync(TEAM_MEMBERS_FILE, JSON.stringify(data, null, 2));
     res.json(data);

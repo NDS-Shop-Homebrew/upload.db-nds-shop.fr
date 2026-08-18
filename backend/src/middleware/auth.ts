@@ -13,7 +13,7 @@ export async function requireAdmin(req: Request, res: Response, next: NextFuncti
   const session = await auth.api.getSession({ headers: req.headers as Headers });
   if (!session) return res.status(401).json({ message: "Non autorisé" });
   const role = (session.user as any).role;
-  if (role !== "admin") return res.status(403).json({ message: "Accès réservé à l'admin" });
+  if (role !== "admin" && role !== "super-admin") return res.status(403).json({ message: "Accès réservé à l'admin" });
   (req as any).user = session.user;
   (req as any).session = session;
   next();

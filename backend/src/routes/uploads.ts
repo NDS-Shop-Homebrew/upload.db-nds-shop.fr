@@ -1,11 +1,11 @@
 import express from "express";
 import multer from "multer";
 import path from "path";
-import { requireAuth } from "../middleware/auth.ts";
+import { requireAdmin } from "../middleware/auth.ts";
 
 const router = express.Router();
 
-router.use(requireAuth);
+router.use(requireAdmin);
 
 const PATHS = {
   ICONS: process.env.ICONS_PATH!,

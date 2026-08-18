@@ -2,7 +2,7 @@ import express from "express";
 import fs from "fs";
 import path from "path";
 import { execSync } from "child_process";
-import { requireAuth } from "../middleware/auth.ts";
+import { requireAdmin } from "../middleware/auth.ts";
 
 const router = express.Router();
 const GAMES_PATH = process.env.GAMES_PATH!;
@@ -78,7 +78,7 @@ router.get("/", (req, res) => {
   }
 });
 
-router.post("/", requireAuth, (req, res) => {
+router.post("/", requireAdmin, (req, res) => {
   const { title, titleId, downloads, screenshots } = req.body;
   if (!title) return res.status(400).json({ error: "Titre requis" });
 
@@ -110,7 +110,7 @@ router.post("/", requireAuth, (req, res) => {
   res.json({ message: "Jeu créé !", fileName });
 });
 
-router.put("/:filename", requireAuth, (req, res) => {
+router.put("/:filename", requireAdmin, (req, res) => {
   const { filename } = req.params;
   const filePath = path.join(GAMES_PATH, filename);
   if (!fs.existsSync(filePath))

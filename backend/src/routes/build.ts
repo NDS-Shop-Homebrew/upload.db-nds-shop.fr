@@ -3,7 +3,7 @@ import { spawn } from "child_process";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { requireAuth } from "../middleware/auth.ts";
+import { requireAdmin } from "../middleware/auth.ts";
 
 const router = express.Router();
 
@@ -33,7 +33,7 @@ let state: BuildState = {
 };
 
 // POST /api/build — lance le build en arrière-plan (non bloquant)
-router.post("/", requireAuth, (req, res) => {
+router.post("/", requireAdmin, (req, res) => {
   if (state.running) {
     return res.status(409).json({ error: "Un build est déjà en cours" });
   }
@@ -85,7 +85,7 @@ router.post("/", requireAuth, (req, res) => {
 });
 
 // GET /api/build/status — log complet + position (temps réel)
-router.get("/status", requireAuth, (_req, res) => {
+router.get("/status", requireAdmin, (_req, res) => {
   res.json({
     running: state.running,
     status: state.status,
