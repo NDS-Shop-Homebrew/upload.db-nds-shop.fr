@@ -100,6 +100,7 @@ router.get("/stats", requireAuth, async (_req, res) => {
 
     // Jeux incomplets : manque ROM, icône, boxart, titleId ou screenshots
     let incomplete = 0, noRom = 0, noIcon = 0, noBoxart = 0;
+    const incompleteGames: { title: string; fileName: string; noRom: boolean; noIcon: boolean; noBoxart: boolean }[] = [];
     let recentGames: { title: string; updated: string }[] = [];
     if (fs.existsSync(GAMES_PATH)) {
       const files = fs.readdirSync(GAMES_PATH).filter((f) => f.endsWith(".json"));
@@ -119,10 +120,14 @@ router.get("/stats", requireAuth, async (_req, res) => {
           const hasRom = Object.keys(g.downloads || {}).some((k: string) => k.endsWith(".nds"));
           const hasIcon = !!g.icon;
           const hasBoxart = (g.screenshots || []).some((s: any) => s.description === "Boxart");
+          const missing = { title: g.title || "?", fileName: f, noRom: !hasRom, noIcon: !hasIcon, noBoxart: !hasBoxart };
           if (!hasRom) noRom++;
           if (!hasIcon) noIcon++;
           if (!hasBoxart) noBoxart++;
-          if (!hasRom || !hasIcon || !hasBoxart) incomplete++;
+          if (missing.noRom || missing.noIcon || missing.noBoxart) {
+            incomplete++;
+            incompleteGames.push(missing);
+          }
         } catch {}
       }
     }
@@ -144,6 +149,7 @@ router.get("/stats", requireAuth, async (_req, res) => {
       noRom,
       noIcon,
       noBoxart,
+      incompleteGames,
       recentGames,
       downloads: downloadCounts(30),
       lastBuild: { at: lastBuildAt, ok: lastBuildOk },

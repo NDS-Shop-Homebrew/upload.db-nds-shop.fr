@@ -21,6 +21,7 @@ interface Stats {
   noRom: number;
   noIcon: number;
   noBoxart: number;
+  incompleteGames: { title: string; fileName: string; noRom: boolean; noIcon: boolean; noBoxart: boolean }[];
   recentGames: { title: string; updated: string }[];
   downloads: { total: number; today: number; nds: number; cia: number; byGame: Record<string, number>; last7: number[] };
   lastBuild: { at: string | null; ok: boolean | null } | null;
@@ -121,16 +122,38 @@ export default function Dashboard() {
       {/* Alerte jeux incomplets */}
       {stats && stats.incomplete > 0 && (
         <Card className="border-amber-300">
-          <CardContent className="p-4 flex items-center gap-3">
-            <AlertTriangle size={20} className="text-amber-500 shrink-0" />
-            <div className="flex-1">
-              <p className="text-sm font-medium">{t("dashboard.incomplete")}: <strong>{stats.incomplete}</strong></p>
-              <div className="flex gap-4 text-xs text-muted-foreground mt-1">
-                <span>{t("dashboard.noRom")}: <strong>{stats.noRom}</strong></span>
-                <span>{t("dashboard.noIcon")}: <strong>{stats.noIcon}</strong></span>
-                <span>{t("dashboard.noBoxart")}: <strong>{stats.noBoxart}</strong></span>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <AlertTriangle size={20} className="text-amber-500 shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-medium">{t("dashboard.incomplete")}: <strong>{stats.incomplete}</strong></p>
+                <div className="flex gap-4 text-xs text-muted-foreground mt-1">
+                  <span>{t("dashboard.noRom")}: <strong>{stats.noRom}</strong></span>
+                  <span>{t("dashboard.noIcon")}: <strong>{stats.noIcon}</strong></span>
+                  <span>{t("dashboard.noBoxart")}: <strong>{stats.noBoxart}</strong></span>
+                </div>
               </div>
             </div>
+            {stats.incompleteGames.length > 0 && (
+              <ul className="mt-3 pt-3 border-t border-amber-200 space-y-1">
+                {stats.incompleteGames.map((g) => (
+                  <li key={g.fileName} className="flex items-center gap-2 text-sm">
+                    <span className="font-medium truncate">{g.title}</span>
+                    <span className="text-muted-foreground text-xs shrink-0">
+                      {g.noRom && <span className="text-red-600">· ROM</span>}
+                      {g.noIcon && <span className="text-red-600">· icône</span>}
+                      {g.noBoxart && <span className="text-red-600">· boxart</span>}
+                    </span>
+                    <a
+                      href={`/edit/${encodeURIComponent(g.fileName)}`}
+                      className="ml-auto text-xs text-primary underline shrink-0"
+                    >
+                      Corriger
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
           </CardContent>
         </Card>
       )}
