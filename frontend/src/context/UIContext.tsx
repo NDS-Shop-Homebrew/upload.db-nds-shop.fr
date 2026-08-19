@@ -64,6 +64,7 @@ const fr: Record<string, string> = {
   "nav.settings": "Paramètres",
   "nav.logout": "Déconnexion",
   "nav.backoffice": "Back-office",
+  "nav.menu": "Menu",
 
   // Login
   "login.title": "Connexion",
@@ -209,6 +210,7 @@ const fr: Record<string, string> = {
   "games.asc": "Croissant",
   "games.desc": "Décroissant",
   "games.noResults": "Aucun jeu trouvé.",
+  "games.noResultsHint": "Essayez de modifier votre recherche ou ajoutez un nouveau jeu.",
   "games.edit": "Modifier",
   "games.loading": "Chargement…",
 
@@ -271,6 +273,7 @@ const en: Record<string, string> = {
   "nav.settings": "Settings",
   "nav.logout": "Log out",
   "nav.backoffice": "Back-office",
+  "nav.menu": "Menu",
 
   "login.title": "Sign in",
   "login.subtitle": "Sign in to access the back-office.",
@@ -409,6 +412,7 @@ const en: Record<string, string> = {
   "games.asc": "Ascending",
   "games.desc": "Descending",
   "games.noResults": "No game found.",
+  "games.noResultsHint": "Try changing your search or add a new game.",
   "games.edit": "Edit",
   "games.loading": "Loading…",
 

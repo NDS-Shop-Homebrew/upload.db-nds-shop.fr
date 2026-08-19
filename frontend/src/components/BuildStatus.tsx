@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { CheckCircle2, XCircle, Loader2, RefreshCw, Rocket } from "lucide-react";
+import { Progress } from "../components/ui/progress";
+import { Alert, AlertDescription } from "../components/ui/alert";
+import { Spinner } from "../components/ui/spinner";
+import { CheckCircle2, XCircle, RefreshCw, Rocket } from "lucide-react";
 import { useUI } from "../context/UIContext";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
@@ -110,12 +113,12 @@ export default function BuildStatus({ onTriggered }: BuildStatusProps) {
           <Rocket size={18} /> {t("build.title")}
         </CardTitle>
         <Button onClick={triggerBuild} disabled={starting || running} className="gap-2" size="sm">
-          {running || starting ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+          {running || starting ? <Spinner /> : <RefreshCw size={16} />}
           {running ? t("build.building") : starting ? t("build.launch") + "…" : t("build.launch")}
         </Button>
       </CardHeader>
       <CardContent className="space-y-4">
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
 
         {!data && !error && (
           <p className="text-sm text-muted-foreground">{t("build.noBuild")}</p>
@@ -126,7 +129,7 @@ export default function BuildStatus({ onTriggered }: BuildStatusProps) {
             <div className="flex items-center gap-3 text-sm">
               {finished && <CheckCircle2 size={20} className="text-green-600 shrink-0" />}
               {failed && <XCircle size={20} className="text-red-600 shrink-0" />}
-              {running && <Loader2 size={20} className="animate-spin text-blue-600 shrink-0" />}
+              {running && <Spinner className="size-5 text-blue-600 shrink-0" />}
               <span className="font-medium capitalize">{data.status === "success" ? t("build.success") : data.status === "failed" ? t("build.failed") : data.status}</span>
               {data.startedAt && (
                 <span className="text-muted-foreground text-xs">
@@ -140,12 +143,7 @@ export default function BuildStatus({ onTriggered }: BuildStatusProps) {
 
             {running && (
               <div className="space-y-1.5">
-                <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-primary rounded-full transition-all duration-500"
-                    style={{ width: `${Math.min(100, progress * 25 + (steps.current ? 12 : 0))}%` }}
-                  />
-                </div>
+                <Progress value={Math.min(100, progress * 25 + (steps.current ? 12 : 0))} className="h-2" />
                 <div className="flex justify-between text-xs text-muted-foreground">
                   {STEPS.map((s) => (
                     <span key={s} className={steps.completed.some((c) => c.toLowerCase().includes(s.toLowerCase())) ? "text-primary font-medium" : ""}>

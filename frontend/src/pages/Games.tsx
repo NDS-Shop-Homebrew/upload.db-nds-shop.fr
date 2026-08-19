@@ -1,9 +1,12 @@
 import { useEffect, useState, useMemo } from "react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
+import { Badge } from "../components/ui/badge";
+import { Skeleton } from "../components/ui/skeleton";
+import { Empty, EmptyContent, EmptyDescription, EmptyMedia, EmptyTitle } from "../components/ui/empty";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Link } from "react-router-dom";
-import { Search, Plus, Edit } from "lucide-react";
+import { Search, Plus, Edit, Gamepad2 } from "lucide-react";
 import SafeImg from "../components/SafeImg";
 import { useUI } from "../context/UIContext";
 
@@ -33,14 +36,10 @@ function gameBoxart(game: Game) {
 
 function CompletionBadge({ ok, label }: { ok: boolean; label: string }) {
   return (
-    <span
-      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${
-        ok ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground"
-      }`}
-    >
+    <Badge variant={ok ? "outline" : "secondary"} className={`gap-1 text-[10px] ${ok ? "text-green-700" : ""}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${ok ? "bg-green-500" : "bg-muted-foreground/50"}`} />
       {label}
-    </span>
+    </Badge>
   );
 }
 
@@ -147,10 +146,10 @@ export default function Games() {
       {isLoading ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="animate-pulse rounded-xl border border-border p-4">
-              <div className="aspect-[4/3] rounded-lg bg-muted mb-3" />
-              <div className="h-4 w-3/4 rounded bg-muted mb-2 mx-auto" />
-              <div className="h-3 w-1/2 rounded bg-muted mx-auto" />
+            <div key={i} className="rounded-xl border border-border bg-card p-4">
+              <Skeleton className="aspect-[4/3] rounded-lg mb-3" />
+              <Skeleton className="h-4 w-3/4 mx-auto" />
+              <Skeleton className="h-3 w-1/2 mt-2 mx-auto" />
             </div>
           ))}
         </div>
@@ -192,9 +191,15 @@ export default function Games() {
           })}
         </div>
       ) : (
-        <div className="rounded-xl border border-border bg-card p-10 text-center text-muted-foreground">
-          {t("games.noResults")}
-        </div>
+        <Empty>
+          <EmptyMedia variant="icon">
+            <Gamepad2 />
+          </EmptyMedia>
+          <EmptyContent>
+            <EmptyTitle>{t("games.noResults")}</EmptyTitle>
+            <EmptyDescription>{t("games.noResultsHint")}</EmptyDescription>
+          </EmptyContent>
+        </Empty>
       )}
     </div>
   );

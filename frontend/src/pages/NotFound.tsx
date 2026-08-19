@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Home, Ghost } from "lucide-react";
+import { Button } from "../components/ui/button";
 import { useUI } from "../context/UIContext";
 
 export default function NotFound() {
@@ -39,13 +40,12 @@ export default function NotFound() {
           whileTap={{ scale: 0.95 }}
           className="pt-4"
         >
-          <Link
-            to="/"
-            className="inline-flex items-center gap-3 px-8 py-4 bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl font-bold shadow-lg hover:shadow-xl transition-all duration-300"
-          >
-            <Home className="w-5 h-5" />
-            {t("notFound.back")}
-          </Link>
+          <Button asChild className="gap-3 px-8 py-6 rounded-2xl font-bold shadow-lg hover:shadow-xl">
+            <Link to="/">
+              <Home className="size-5" />
+              {t("notFound.back")}
+            </Link>
+          </Button>
         </motion.div>
       </motion.div>
     </div>

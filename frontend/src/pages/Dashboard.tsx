@@ -2,14 +2,15 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
+import { Alert, AlertDescription } from "../components/ui/alert";
+import { Progress } from "../components/ui/progress";
+import { Skeleton } from "../components/ui/skeleton";
 import {
   Gamepad2, FileArchive, Image as ImageIcon, Download, Rocket,
   CheckCircle2, XCircle, Loader2, TrendingUp, AlertTriangle, Disc3, Clock,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useUI } from "../context/UIContext";
-import { DarkModeToggle } from "../components/DarkModeToggle";
-import { LangToggle } from "../components/LangToggle";
 
 interface Stats {
   users: number;
@@ -85,15 +86,13 @@ export default function Dashboard() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <LangToggle />
-          <DarkModeToggle />
           <Button onClick={load} variant="outline" size="sm" disabled={loading}>
             {loading ? <Loader2 size={14} className="animate-spin" /> : t("dashboard.refresh")}
           </Button>
         </div>
       </div>
 
-      {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">{t("dashboard.statsError")}: {error}</p>}
+      {error && <Alert variant="destructive"><AlertDescription>{t("dashboard.statsError")}: {error}</AlertDescription></Alert>}
 
       {/* Dernier build */}
       {stats?.lastBuild && (
@@ -160,16 +159,27 @@ export default function Dashboard() {
 
       {/* Stats cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        {statCards.map((c) => (
-          <Card key={c.label}>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 text-muted-foreground text-xs mb-2">
-                <c.icon size={14} className={c.color} /> {c.label}
-              </div>
-              <p className="text-2xl font-bold">{c.value}</p>
-            </CardContent>
-          </Card>
-        ))}
+        {!stats ? (
+          Array.from({ length: 6 }).map((_, i) => (
+            <Card key={i}>
+              <CardContent className="p-4">
+                <Skeleton className="h-4 w-20 mb-2" />
+                <Skeleton className="h-7 w-10" />
+              </CardContent>
+            </Card>
+          ))
+        ) : (
+          statCards.map((c) => (
+            <Card key={c.label}>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 text-muted-foreground text-xs mb-2">
+                  <c.icon size={14} className={c.color} /> {c.label}
+                </div>
+                <p className="text-2xl font-bold">{c.value}</p>
+              </CardContent>
+            </Card>
+          ))
+        )}
       </div>
 
       {/* Graphique 7 jours + répartition NDS/CIA */}
@@ -228,12 +238,7 @@ export default function Dashboard() {
             {topDownloads.map(([game, count]) => (
               <div key={game} className="flex items-center gap-3">
                 <span className="text-sm truncate w-56 shrink-0">{game}</span>
-                <div className="flex-1 h-4 bg-muted rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-primary rounded-full transition-all"
-                    style={{ width: `${(count / maxDownloads) * 100}%` }}
-                  />
-                </div>
+                <Progress value={(count / maxDownloads) * 100} className="h-4" />
                 <span className="text-sm text-muted-foreground shrink-0">{count}</span>
               </div>
             ))}

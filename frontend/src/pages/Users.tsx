@@ -3,7 +3,20 @@ import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Badge } from "../components/ui/badge";
-import { Modal } from "../components/ui/modal";
+import { Alert, AlertDescription } from "../components/ui/alert";
+import {
+  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
+} from "../components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "../components/ui/alert-dialog";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "../components/ui/select";
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "../components/ui/table";
 import { Users as UsersIcon, Plus, Shield, User as UserIcon, Trash2, Ban, Lock, Pencil, Search } from "lucide-react";
 import { authClient } from "../lib/auth-client";
 import { useAuth } from "../context/AuthContext";
@@ -36,6 +49,7 @@ export default function Users() {
   const [editName, setEditName] = useState("");
   const [pwdUser, setPwdUser] = useState<AdminUser | null>(null);
   const [newPassword, setNewPassword] = useState("");
+  const [deletingUser, setDeletingUser] = useState<AdminUser | null>(null);
 
   const load = async () => {
     try {
@@ -106,10 +120,9 @@ export default function Users() {
   };
 
   const removeUser = async (u: AdminUser) => {
-    if (u.id === me?.id) return notify(t("users.cannotDeleteSelf"), false);
-    if (!confirm(`${t("users.confirmDelete")} "${u.username}" ?`)) return;
     const { error } = await (authClient.admin.removeUser as any)({ userId: u.id });
     notify(error ? error.message || "Erreur" : t("users.deleted"), !error);
+    setDeletingUser(null);
     load();
   };
 
@@ -127,65 +140,71 @@ export default function Users() {
         </Button>
       </div>
 
-      {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">{error}</p>}
+      {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
       {msg && (
-        <p className={`text-sm rounded-lg p-3 ${msg.ok ? "text-green-700 bg-green-50 border border-green-200" : "text-red-600 bg-red-50 border border-red-200"}`}>
-          {msg.text}
-        </p>
+        <Alert variant={msg.ok ? "default" : "destructive"}>
+          <AlertDescription>{msg.text}</AlertDescription>
+        </Alert>
       )}
 
       <div className="relative max-w-md">
         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-        <input
+        <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={t("users.search")}
-          className="h-10 w-full rounded-lg border border-input bg-background pl-9 pr-3 text-sm"
+          className="pl-9"
         />
       </div>
 
       <Card>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-muted-foreground border-b border-border">
-                  <th className="p-3">{t("users.username")}</th>
-                  <th className="p-3 hidden md:table-cell">{t("users.email")}</th>
-                  <th className="p-3">{t("users.role")}</th>
-                  <th className="p-3">{t("users.status")}</th>
-                  <th className="p-3 text-right">{t("users.actions")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((u) => (
-                  <tr key={u.id} className="border-b border-border/50 hover:bg-muted/30">
-                    <td className="p-3 font-medium flex items-center gap-2">
+          <Table>
+            <TableHeader>
+              <TableRow className="text-left text-muted-foreground">
+                <TableHead>{t("users.username")}</TableHead>
+                <TableHead className="hidden md:table-cell">{t("users.email")}</TableHead>
+                <TableHead>{t("users.role")}</TableHead>
+                <TableHead>{t("users.status")}</TableHead>
+                <TableHead className="text-right">{t("users.actions")}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.map((u) => (
+                <TableRow key={u.id}>
+                  <TableCell className="font-medium">
+                    <span className="flex items-center gap-2">
                       {u.role === "admin" ? <Shield size={14} className="text-primary" /> : <UserIcon size={14} className="text-muted-foreground" />}
                       <span>{u.username}</span>
                       {u.id === me?.id && <Badge variant="outline" className="text-[10px]">me</Badge>}
                       {u.name && u.name !== u.username && (
                         <span className="text-muted-foreground font-normal text-xs">({u.name})</span>
                       )}
-                    </td>
-                    <td className="p-3 hidden md:table-cell text-muted-foreground">{u.email}</td>
-                    <td className="p-3">
-                      {u.role === "admin" || u.role === "super-admin" ? (
-                        <Badge>{u.role}</Badge>
-                      ) : isSuperAdmin ? (
-                        <select value={u.role} onChange={(e) => setRole(u.id, e.target.value)}
-                          className="h-8 rounded border border-input bg-background px-2 text-xs">
-                          <option value="member">member</option>
-                          <option value="admin">admin</option>
-                        </select>
-                      ) : (
-                        <Badge variant="secondary">member</Badge>
-                      )}
-                    </td>
-                    <td className="p-3">
-                      <Badge variant={u.banned ? "destructive" : "outline"}>{u.banned ? t("users.banned") : t("users.active")}</Badge>
-                    </td>
-                    <td className="p-3 text-right space-x-1 whitespace-nowrap">
+                    </span>
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell text-muted-foreground">{u.email}</TableCell>
+                  <TableCell>
+                    {u.role === "admin" || u.role === "super-admin" ? (
+                      <Badge>{u.role}</Badge>
+                    ) : isSuperAdmin ? (
+                      <Select value={u.role} onValueChange={(v) => setRole(u.id, v)}>
+                        <SelectTrigger className="h-8 w-28 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="member">member</SelectItem>
+                          <SelectItem value="admin">admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Badge variant="secondary">member</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={u.banned ? "destructive" : "outline"}>{u.banned ? t("users.banned") : t("users.active")}</Badge>
+                  </TableCell>
+                  <TableCell className="text-right whitespace-nowrap">
+                    <span className="inline-flex gap-1">
                       <Button size="sm" variant="outline" onClick={() => { setEditUser(u); setEditName(u.name || u.username); }} title={t("users.edit")}>
                         <Pencil size={13} />
                       </Button>
@@ -200,76 +219,112 @@ export default function Users() {
                         </>
                       )}
                       {isSuperAdmin && u.id !== me?.id && (
-                        <Button size="sm" variant="outline" className="text-destructive" onClick={() => removeUser(u)} title={t("users.delete")}>
+                        <Button size="sm" variant="outline" className="text-destructive" onClick={() => setDeletingUser(u)} title={t("users.delete")}>
                           <Trash2 size={13} />
                         </Button>
                       )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {filtered.length === 0 && (
-              <p className="p-6 text-center text-sm text-muted-foreground">{t("users.noResults")}</p>
-            )}
-          </div>
+                    </span>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          {filtered.length === 0 && (
+            <p className="p-6 text-center text-sm text-muted-foreground">{t("users.noResults")}</p>
+          )}
         </CardContent>
       </Card>
 
-      {/* Modal Créer */}
-      <Modal open={showCreate} onClose={() => setShowCreate(false)} title={t("users.createTitle")}>
-        <div className="space-y-3">
-          <div>
-            <label className="text-sm font-medium">{t("users.username")}</label>
-            <Input value={newUser.username} onChange={(e) => setNewUser({ ...newUser, username: e.target.value })} className="mt-1" />
+      {/* Dialog Créer */}
+      <Dialog open={showCreate} onOpenChange={setShowCreate}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("users.createTitle")}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <label className="text-sm font-medium">{t("users.username")}</label>
+              <Input value={newUser.username} onChange={(e) => setNewUser({ ...newUser, username: e.target.value })} className="mt-1" />
+            </div>
+            <div>
+              <label className="text-sm font-medium">{t("users.password")}</label>
+              <Input type="password" value={newUser.password} onChange={(e) => setNewUser({ ...newUser, password: e.target.value })} className="mt-1" />
+            </div>
+            <div>
+              <label className="text-sm font-medium">{t("users.role")}</label>
+              <Select value={newUser.role} onValueChange={(v) => setNewUser({ ...newUser, role: v })}>
+                <SelectTrigger className="mt-1 w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="member">member</SelectItem>
+                  <SelectItem value="admin">admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-          <div>
-            <label className="text-sm font-medium">{t("users.password")}</label>
-            <Input type="password" value={newUser.password} onChange={(e) => setNewUser({ ...newUser, password: e.target.value })} className="mt-1" />
-          </div>
-          <div>
-            <label className="text-sm font-medium">{t("users.role")}</label>
-            <select value={newUser.role}
-              onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
-              className="mt-1 h-10 w-full rounded-lg border border-input bg-background px-3 text-sm">
-              <option value="member">member</option>
-              <option value="admin">admin</option>
-            </select>
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
+          <DialogFooter>
             <Button variant="outline" onClick={() => setShowCreate(false)}>{t("users.cancel")}</Button>
             <Button onClick={createUser} disabled={!newUser.username || !newUser.password}>{t("users.save")}</Button>
-          </div>
-        </div>
-      </Modal>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      {/* Modal Éditer */}
-      <Modal open={!!editUser} onClose={() => setEditUser(null)} title={t("users.edit")}>
-        <div className="space-y-3">
-          <div>
-            <label className="text-sm font-medium">{t("users.name")}</label>
-            <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="mt-1" />
+      {/* Dialog Éditer */}
+      <Dialog open={!!editUser} onOpenChange={(o) => !o && setEditUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("users.edit")}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <label className="text-sm font-medium">{t("users.name")}</label>
+              <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="mt-1" />
+            </div>
           </div>
-          <div className="flex justify-end gap-2 pt-2">
+          <DialogFooter>
             <Button variant="outline" onClick={() => setEditUser(null)}>{t("users.cancel")}</Button>
             <Button onClick={saveEdit}>{t("users.save")}</Button>
-          </div>
-        </div>
-      </Modal>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      {/* Modal Mot de passe */}
-      <Modal open={!!pwdUser} onClose={() => setPwdUser(null)} title={t("users.setPassword")}>
-        <div className="space-y-3">
-          <div>
-            <label className="text-sm font-medium">{t("users.newPassword")}</label>
-            <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="mt-1" />
+      {/* Dialog Mot de passe */}
+      <Dialog open={!!pwdUser} onOpenChange={(o) => !o && setPwdUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("users.setPassword")}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <label className="text-sm font-medium">{t("users.newPassword")}</label>
+              <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="mt-1" />
+            </div>
           </div>
-          <div className="flex justify-end gap-2 pt-2">
+          <DialogFooter>
             <Button variant="outline" onClick={() => setPwdUser(null)}>{t("users.cancel")}</Button>
             <Button onClick={savePassword} disabled={!newPassword}>{t("users.save")}</Button>
-          </div>
-        </div>
-      </Modal>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* AlertDialog Suppression */}
+      <AlertDialog open={!!deletingUser} onOpenChange={(o) => !o && setDeletingUser(null)}>
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("users.delete")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("users.confirmDelete")} "{deletingUser?.username}" ?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeletingUser(null)}>{t("users.cancel")}</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={() => deletingUser && removeUser(deletingUser)}>
+              {t("users.delete")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

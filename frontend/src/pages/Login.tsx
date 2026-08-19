@@ -2,6 +2,9 @@ import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import { Spinner } from "../components/ui/spinner";
+import { Alert, AlertDescription } from "../components/ui/alert";
 import { motion } from "framer-motion";
 import { LogIn, ShieldCheck, Lock } from "lucide-react";
 import { DarkModeToggle } from "../components/DarkModeToggle";
@@ -94,9 +97,7 @@ export default function Login() {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-1.5">
-                <label htmlFor="username" className="text-sm font-medium text-foreground">
-                  {t("login.username")}
-                </label>
+                <Label htmlFor="username">{t("login.username")}</Label>
                 <Input
                   id="username"
                   type="text"
@@ -110,9 +111,7 @@ export default function Login() {
               </div>
 
               <div className="space-y-1.5">
-                <label htmlFor="password" className="text-sm font-medium text-foreground">
-                  {t("login.password")}
-                </label>
+                <Label htmlFor="password">{t("login.password")}</Label>
                 <Input
                   id="password"
                   type="password"
@@ -126,13 +125,9 @@ export default function Login() {
               </div>
 
               {error && (
-                <motion.div
-                  initial={{ opacity: 0, y: -5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg"
-                >
-                  {error}
-                </motion.div>
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
               )}
 
               <Button
@@ -142,7 +137,7 @@ export default function Login() {
               >
                 {isLoading ? (
                   <>
-                    <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                    <Spinner className="size-4" />
                     {t("login.loading")}
                   </>
                 ) : (

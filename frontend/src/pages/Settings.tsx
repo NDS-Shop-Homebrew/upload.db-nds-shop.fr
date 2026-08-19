@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
+import { Switch } from "../components/ui/switch";
+import { Alert, AlertDescription } from "../components/ui/alert";
 import { Settings as SettingsIcon, User, KeyRound, Mail, Sun, Moon, Languages } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useUI } from "../context/UIContext";
@@ -45,9 +47,9 @@ export default function Settings() {
       </div>
 
       {msg && (
-        <p className={`text-sm rounded-lg p-3 ${msg.ok ? "text-green-700 bg-green-50 border border-green-200" : "text-red-600 bg-red-50 border border-red-200"}`}>
-          {msg.text}
-        </p>
+        <Alert variant={msg.ok ? "default" : "destructive"}>
+          <AlertDescription>{msg.text}</AlertDescription>
+        </Alert>
       )}
 
       <Card>
@@ -79,9 +81,7 @@ export default function Settings() {
               {darkMode ? <Moon size={16} className="text-primary" /> : <Sun size={16} className="text-primary" />}
               {t("settings.darkMode")}
             </span>
-            <span className={`w-10 h-6 rounded-full transition-colors ${darkMode ? "bg-primary" : "bg-muted"}`}>
-              <span className={`block w-4 h-4 mt-1 ml-1 rounded-full bg-background border border-border transition-transform ${darkMode ? "translate-x-4" : ""}`} />
-            </span>
+            <Switch checked={darkMode} onCheckedChange={toggleDarkMode} aria-label={t("settings.darkMode")} />
           </button>
           <button onClick={toggleLang} className="w-full flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted transition-colors">
             <span className="flex items-center gap-2 text-sm">

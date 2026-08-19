@@ -3,6 +3,8 @@ import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
 import { Input } from "../components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
+import { Alert, AlertDescription } from "../components/ui/alert";
 import { UsersRound, Save, Search, RefreshCw, ChevronUp, ChevronDown, X } from "lucide-react";
 import { useUI } from "../context/UIContext";
 
@@ -139,7 +141,7 @@ export default function Team() {
       {guild && (
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            {guild.icon && <img src={guild.icon} alt={guild.name} className="w-10 h-10 rounded-full" />}
+            {guild.icon && <Avatar className="w-10 h-10"><AvatarImage src={guild.icon} alt={guild.name} /></Avatar>}
             <div>
               <p className="font-semibold">{guild.name}</p>
               <p className="text-xs text-muted-foreground">
@@ -151,11 +153,11 @@ export default function Team() {
         </Card>
       )}
 
-      {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">{error}</p>}
+      {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
       {msg && (
-        <p className={`text-sm rounded-lg p-3 ${msg.ok ? "text-green-700 bg-green-50 border border-green-200" : "text-red-600 bg-red-50 border border-red-200"}`}>
-          {msg.text}
-        </p>
+        <Alert variant={msg.ok ? "default" : "destructive"}>
+          <AlertDescription>{msg.text}</AlertDescription>
+        </Alert>
       )}
 
       {loading ? (
@@ -171,11 +173,12 @@ export default function Team() {
                 const d = memberOf(tm.id);
                 return (
                   <div key={tm.id} className="flex items-center gap-3 p-3 rounded-lg border border-border">
-                    {d?.avatar
-                      ? <img src={d.avatar} alt={d.global_name} className="w-10 h-10 rounded-full shrink-0" />
-                      : <div className="w-10 h-10 rounded-full bg-primary/15 text-primary flex items-center justify-center font-bold shrink-0">
-                          {(d?.global_name || d?.username || "?").slice(0, 1)}
-                        </div>}
+                    <Avatar className="w-10 h-10 shrink-0">
+                      {d?.avatar && <AvatarImage src={d.avatar} alt={d.global_name} />}
+                      <AvatarFallback className="bg-primary/15 text-primary font-bold">
+                        {(d?.global_name || d?.username || "?").slice(0, 1)}
+                      </AvatarFallback>
+                    </Avatar>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium truncate">{d?.global_name || d?.username || tm.id}</p>
                       {d && d.nick && d.nick !== d.global_name && (
@@ -229,9 +232,10 @@ export default function Team() {
                     onClick={() => { add(m.id); setSearch(""); }}
                     className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors hover:bg-muted/30 border border-transparent hover:border-border"
                   >
-                    {m.avatar
-                      ? <img src={m.avatar} alt={m.global_name} className="w-8 h-8 rounded-full shrink-0" />
-                      : <div className="w-8 h-8 rounded-full bg-primary/15 text-primary flex items-center justify-center font-bold shrink-0">{m.global_name.slice(0, 1)}</div>}
+                    <Avatar className="w-8 h-8 shrink-0">
+                      {m.avatar && <AvatarImage src={m.avatar} alt={m.global_name} />}
+                      <AvatarFallback className="bg-primary/15 text-primary font-bold">{m.global_name.slice(0, 1)}</AvatarFallback>
+                    </Avatar>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium truncate">{m.global_name}</p>
                       <p className="text-xs text-muted-foreground truncate">{m.nick || m.username}</p>

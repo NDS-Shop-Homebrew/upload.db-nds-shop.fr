@@ -2,8 +2,11 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
+import { Textarea } from "../components/ui/textarea";
 import { Button } from "../components/ui/button";
 import { Checkbox } from "../components/ui/checkbox";
+import { Alert, AlertDescription } from "../components/ui/alert";
+import { Spinner } from "../components/ui/spinner";
 import {
   Card,
   CardContent,
@@ -335,8 +338,8 @@ export default function EditGameForm() {
 
   if (loading) {
     return (
-      <div className="p-8 text-center animate-pulse">
-        {t("edit.loading")}
+      <div className="p-8 flex items-center justify-center gap-2 text-muted-foreground">
+        <Spinner /> {t("edit.loading")}
       </div>
     );
   }
@@ -419,14 +422,13 @@ export default function EditGameForm() {
 
           <div className="space-y-2">
             <Label htmlFor="description">{t("edit.descLabel")}</Label>
-            <textarea
+            <Textarea
               id="description"
               name="description"
               value={game.description || ""}
               onChange={(e) => setGame((prev) => ({ ...prev, description: e.target.value }))}
               placeholder="Résumé du jeu..."
               rows={4}
-              className="w-full rounded-md border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
             <p className="text-xs text-muted-foreground">{t("edit.descHint")}</p>
           </div>
@@ -599,15 +601,9 @@ export default function EditGameForm() {
 
           <div className="pt-6 border-t flex flex-col items-center gap-4">
             {message && (
-              <div
-                className={`w-full p-3 rounded-md text-center font-medium ${
-                  message.type === "success"
-                    ? "bg-green-100 text-green-800"
-                    : "bg-destructive/15 text-destructive"
-                }`}
-              >
-                {message.text}
-              </div>
+              <Alert variant={message.type === "success" ? "default" : "destructive"} className="w-full text-center">
+                <AlertDescription className="font-medium">{message.text}</AlertDescription>
+              </Alert>
             )}
 
             <Button
