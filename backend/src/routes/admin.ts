@@ -35,7 +35,16 @@ const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov
 
 // Nombre de téléchargements .nds / .cia depuis le log nginx (derniers N jours)
 function downloadCounts(days = 30) {
-  const counts = { total: 0, today: 0, nds: 0, cia: 0, byGame: {} as Record<string, number>, last7: [0,0,0,0,0,0,0] };
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const dateLabel = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const counts = {
+    total: 0, today: 0, nds: 0, cia: 0, byGame: {} as Record<string, number>, last7: [0,0,0,0,0,0,0],
+    last30: Array.from({ length: days }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (days - 1 - i));
+      return { date: dateLabel(d), total: 0, nds: 0, cia: 0 };
+    }),
+  };
   const cutoff = Date.now() / 1000 - days * 86400;
   const dayStart = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() / 1000;
   const todayStart = dayStart(new Date());
@@ -67,6 +76,14 @@ function downloadCounts(days = 30) {
         else counts.cia++;
         const game = file.split("/").pop() || "?";
         counts.byGame[game] = (counts.byGame[game] || 0) + 1;
+        // série quotidienne 30 jours
+        const dayIdx = Math.floor((todayStart - ts) / 86400);
+        if (dayIdx >= 0 && dayIdx < days) {
+          const slot = counts.last30[days - 1 - dayIdx];
+          slot.total++;
+          if (file.endsWith(".nds")) slot.nds++;
+          else slot.cia++;
+        }
         // historique 7 jours
         for (let i = 0; i < 7; i++) {
           const start = todayStart - i * 86400;
@@ -81,7 +98,7 @@ function downloadCounts(days = 30) {
 // GET /api/admin/stats — dashboard complet
 router.get("/stats", requireAuth, async (_req, res) => {
   try {
-    const [users, games, forwarders, screenshots, roms, buildLog] = await Promise.all([
+    const [users, games, forwarders, screenshots, roms, buildLog, userRows] = await Promise.all([
       prisma.user.count(),
       fs.existsSync(GAMES_PATH)
         ? fs.readdirSync(GAMES_PATH).filter((f) => f.endsWith(".json")).length
@@ -96,41 +113,70 @@ router.get("/stats", requireAuth, async (_req, res) => {
         ? fs.readdirSync(ROMS_PATH).filter((f) => f.endsWith(".nds")).length
         : 0,
       fs.existsSync(BUILD_LOG) ? fs.readFileSync(BUILD_LOG, "utf8") : "",
+      prisma.user.findMany({ select: { createdAt: true } }),
     ]);
 
     // Jeux incomplets : manque ROM, icône, boxart, titleId ou screenshots
     let incomplete = 0, noRom = 0, noIcon = 0, noBoxart = 0;
     const incompleteGames: { title: string; fileName: string; noRom: boolean; noIcon: boolean; noBoxart: boolean }[] = [];
     let recentGames: { title: string; updated: string }[] = [];
+    const titleByRom: Record<string, string> = {};
+    const versionCounts: Record<string, number> = {};
+    const systemCounts: Record<string, number> = {};
+    const categoryCounts: Record<string, number> = {};
+    const gamesByMonth: Record<string, number> = {};
     if (fs.existsSync(GAMES_PATH)) {
       const files = fs.readdirSync(GAMES_PATH).filter((f) => f.endsWith(".json"));
-      recentGames = files
-        .map((f) => {
-          try {
-            return JSON.parse(fs.readFileSync(path.join(GAMES_PATH, f), "utf-8"));
-          } catch { return null; }
-        })
-        .filter(Boolean)
-        .map((g) => ({ title: g.title || "?", updated: g.updated || "" }))
-        .sort((a, b) => (b.updated || "").localeCompare(a.updated || ""))
-        .slice(0, 8);
+      const all: { f: string; g: any }[] = [];
       for (const f of files) {
         try {
-          const g = JSON.parse(fs.readFileSync(path.join(GAMES_PATH, f), "utf-8"));
-          const hasRom = Object.keys(g.downloads || {}).some((k: string) => k.endsWith(".nds"));
-          const hasIcon = !!g.icon;
-          const hasBoxart = (g.screenshots || []).some((s: any) => s.description === "Boxart");
-          const missing = { title: g.title || "?", fileName: f, noRom: !hasRom, noIcon: !hasIcon, noBoxart: !hasBoxart };
-          if (!hasRom) noRom++;
-          if (!hasIcon) noIcon++;
-          if (!hasBoxart) noBoxart++;
-          if (missing.noRom || missing.noIcon || missing.noBoxart) {
-            incomplete++;
-            incompleteGames.push(missing);
-          }
+          all.push({ f, g: JSON.parse(fs.readFileSync(path.join(GAMES_PATH, f), "utf-8")) });
         } catch {}
       }
+      recentGames = all
+        .map(({ g }) => ({ title: g.title || "?", updated: g.updated || "" }))
+        .sort((a, b) => (b.updated || "").localeCompare(a.updated || ""))
+        .slice(0, 8);
+      for (const { f, g } of all) {
+        const hasRom = Object.keys(g.downloads || {}).some((k: string) => k.endsWith(".nds"));
+        const hasIcon = !!g.icon;
+        const hasBoxart = (g.screenshots || []).some((s: any) => s.description === "Boxart");
+        const missing = { title: g.title || "?", fileName: f, noRom: !hasRom, noIcon: !hasIcon, noBoxart: !hasBoxart };
+        if (!hasRom) noRom++;
+        if (!hasIcon) noIcon++;
+        if (!hasBoxart) noBoxart++;
+        if (missing.noRom || missing.noIcon || missing.noBoxart) {
+          incomplete++;
+          incompleteGames.push(missing);
+        }
+        for (const k of Object.keys(g.downloads || {})) {
+          titleByRom[k.split("/").pop() || k] = g.title || "?";
+        }
+        const ver = g.version || "?";
+        versionCounts[ver] = (versionCounts[ver] || 0) + 1;
+        for (const s of g.systems || []) systemCounts[s] = (systemCounts[s] || 0) + 1;
+        for (const c of g.categories || []) categoryCounts[c] = (categoryCounts[c] || 0) + 1;
+        const m = (g.updated || "").slice(0, 7);
+        if (m) gamesByMonth[m] = (gamesByMonth[m] || 0) + 1;
+      }
     }
+
+    const usersByMonth: Record<string, number> = {};
+    for (const u of userRows) {
+      const m = u.createdAt.toISOString().slice(0, 7);
+      usersByMonth[m] = (usersByMonth[m] || 0) + 1;
+    }
+
+    const downloads = downloadCounts(30);
+    const byGame: Record<string, number> = {};
+    for (const [file, n] of Object.entries(downloads.byGame)) {
+      const title = titleByRom[file] || file;
+      byGame[title] = (byGame[title] || 0) + n;
+    }
+    const topGames = Object.entries(byGame)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([title, count]) => ({ title, count }));
 
     // Le header du build est la PREMIÈRE ligne : "[date] SUCCESS" ou "[date] FAILED"
     const buildLines = buildLog.split("\n").filter((l) => l.trim());
@@ -152,6 +198,12 @@ router.get("/stats", requireAuth, async (_req, res) => {
       incompleteGames,
       recentGames,
       downloads: downloadCounts(30),
+      topGames,
+      versionCounts,
+      systemCounts,
+      categoryCounts,
+      gamesByMonth,
+      usersByMonth,
       lastBuild: { at: lastBuildAt, ok: lastBuildOk },
       buildLog: buildLogTail,
     });

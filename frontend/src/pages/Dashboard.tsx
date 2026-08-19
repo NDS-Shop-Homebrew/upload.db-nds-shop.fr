@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
@@ -24,7 +26,7 @@ interface Stats {
   noBoxart: number;
   incompleteGames: { title: string; fileName: string; noRom: boolean; noIcon: boolean; noBoxart: boolean }[];
   recentGames: { title: string; updated: string }[];
-  downloads: { total: number; today: number; nds: number; cia: number; byGame: Record<string, number>; last7: number[] };
+  downloads: { total: number; today: number; nds: number; cia: number; byGame: Record<string, number>; last7: number[]; last30: { date: string; total: number; nds: number; cia: number }[] };
   lastBuild: { at: string | null; ok: boolean | null } | null;
   buildLog: string;
 }
@@ -181,6 +183,31 @@ export default function Dashboard() {
           ))
         )}
       </div>
+
+      {/* Widget stats + lien page détaillée */}
+      {stats && (
+        <Card>
+          <CardHeader className="flex-row items-center justify-between">
+            <CardTitle className="text-base">{t("dashboard.downloads14")}</CardTitle>
+            <Button asChild variant="outline" size="sm">
+              <Link to="/stats">{t("dashboard.seeStats")}</Link>
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={150}>
+              <AreaChart data={stats.downloads.last30.slice(-14)}>
+                <XAxis dataKey="date" tick={{ fill: "currentColor", fontSize: 11 }} tickLine={false} axisLine={false} minTickGap={24} />
+                <YAxis tick={{ fill: "currentColor", fontSize: 11 }} tickLine={false} axisLine={false} allowDecimals={false} width={30} />
+                <Tooltip
+                  contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "0.5rem", fontSize: 12 }}
+                />
+                <Area type="monotone" dataKey="nds" name={t("dashboard.nds")} stackId="1" stroke="#10B981" fill="#10B981" fillOpacity={0.35} />
+                <Area type="monotone" dataKey="cia" name={t("dashboard.cia")} stackId="1" stroke="#F59E0B" fill="#F59E0B" fillOpacity={0.35} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Graphique 7 jours + répartition NDS/CIA */}
       {stats && (

@@ -1,6 +1,6 @@
 import { Outlet, NavLink, useLocation } from "react-router-dom";
 import {
-  LayoutDashboard, Gamepad2, Users, UsersRound, Hammer, Settings, LogOut,
+  LayoutDashboard, Gamepad2, Users, UsersRound, Hammer, Settings, LogOut, BarChart3,
 } from "lucide-react";
 import { DarkModeToggle } from "./DarkModeToggle";
 import { LangToggle } from "./LangToggle";
@@ -21,6 +21,7 @@ export default function Layout() {
 
   const navItems = [
     { to: "/dashboard", label: t("nav.dashboard"), icon: LayoutDashboard, adminOnly: false },
+    { to: "/stats", label: t("nav.stats"), icon: BarChart3, adminOnly: false },
     { to: "/games", label: t("nav.games"), icon: Gamepad2, adminOnly: false },
     { to: "/users", label: t("nav.users"), icon: Users, adminOnly: true },
     { to: "/team", label: t("nav.team"), icon: UsersRound, adminOnly: true },
@@ -39,7 +40,7 @@ export default function Layout() {
               <SidebarMenuButton size="lg" asChild>
                 <a href="/">
                   <img src="/logo.png" alt="NDS-Shop" className="size-8 rounded-lg" />
-                  <div className="min-w-0">
+                  <div className="group-data-[collapsible=icon]:hidden min-w-0">
                     <p className="font-bold leading-tight truncate">NDS-Shop</p>
                     <p className="text-xs text-muted-foreground">{t("nav.backoffice")}</p>
                   </div>
@@ -54,7 +55,7 @@ export default function Layout() {
             <SidebarMenu>
               {visibleNav.map((item) => (
                 <SidebarMenuItem key={item.to}>
-                  <SidebarMenuButton asChild isActive={location.pathname === item.to} tooltip={item.label}>
+                  <SidebarMenuButton asChild isActive={location.pathname === item.to} tooltip={item.label} className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground data-[active=true]:hover:bg-primary data-[active=true]:hover:text-primary-foreground">
                     <NavLink to={item.to}>
                       <item.icon />
                       <span>{item.label}</span>
@@ -72,7 +73,7 @@ export default function Layout() {
                 <div className="flex size-8 items-center justify-center rounded-lg bg-primary/15 text-primary font-bold">
                   {user?.username?.slice(0, 2).toUpperCase() || "?"}
                 </div>
-                <div className="min-w-0 flex-1">
+                <div className="group-data-[collapsible=icon]:hidden min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{user?.username}</p>
                   <Badge variant={isAdmin ? "default" : "secondary"} className="mt-0.5">
                     {user?.role}
@@ -81,9 +82,11 @@ export default function Layout() {
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <div className="flex items-center gap-1 p-2">
-                <DarkModeToggle />
-                <LangToggle />
+              <div className="group-data-[collapsible=icon]:justify-center flex items-center gap-1 p-2">
+                <div className="group-data-[collapsible=icon]:hidden flex items-center gap-1">
+                  <DarkModeToggle />
+                  <LangToggle />
+                </div>
                 <Button variant="ghost" size="icon" onClick={logout} title={t("nav.logout")} className="text-muted-foreground hover:text-destructive">
                   <LogOut />
                 </Button>

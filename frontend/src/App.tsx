@@ -5,6 +5,7 @@ import NotFound from "./pages/NotFound";
 import EditGameForm from "./pages/EditGameForm";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
+import Stats from "./pages/Stats";
 import Games from "./pages/Games";
 import Users from "./pages/Users";
 import Team from "./pages/Team";
@@ -28,6 +29,7 @@ export default function App() {
         <Route element={<PrivateRoute><Layout /></PrivateRoute>}>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/stats" element={<Stats />} />
           <Route path="/games" element={<Games />} />
           <Route path="/users" element={<AdminRoute><Users /></AdminRoute>} />
           <Route path="/team" element={<AdminRoute><Team /></AdminRoute>} />
