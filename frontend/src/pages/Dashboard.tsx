@@ -80,7 +80,7 @@ export default function Dashboard() {
           <h1 className="text-2xl font-bold tracking-tight">{t("dashboard.title")}</h1>
           <p className="text-muted-foreground text-sm">
             {t("dashboard.greeting")} <strong>{user?.username}</strong> · {t("dashboard.role")}{" "}
-            <Badge variant={user?.role === "admin" ? "default" : "secondary"}>{user?.role}</Badge>
+            <Badge variant={user?.role === "admin" || user?.role === "super-admin" ? "default" : "secondary"}>{user?.role}</Badge>
           </p>
         </div>
         <div className="flex items-center gap-2">

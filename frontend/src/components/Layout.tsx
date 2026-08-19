@@ -11,12 +11,11 @@ import { Badge } from "./ui/badge";
 import { cn } from "../lib/utils";
 
 export default function Layout() {
-  const { user, logout } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
   const { t } = useUI();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem("uploadNavCollapsed") === "1");
   const location = useLocation();
-  const isAdmin = user?.role === "admin";
 
   useEffect(() => {
     setSidebarOpen(false);
