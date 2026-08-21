@@ -1,12 +1,16 @@
 import express from "express";
 import fs from "fs";
 import path from "path";
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 import { requireAdmin } from "../middleware/auth.ts";
 
 const router = express.Router();
 const GAMES_PATH = process.env.GAMES_PATH!;
 const GIT_REPO_PATH = process.env.GIT_REPO_PATH || "";
+
+const FILENAME_RE = /^[\w.-]+\.json$/;
+const isValidFilename = (name: string) =>
+  FILENAME_RE.test(name) && !name.includes("..");
 
 const formatDate = () =>
   new Date().toISOString().replace(/\.\d{3}Z$/, "+02:00");
@@ -61,9 +65,14 @@ const findExistingByTitleId = (titleId?: string) => {
 const gitPush = (message: string) => {
   if (!GIT_REPO_PATH) return;
   const repo = GIT_REPO_PATH;
-  execSync("git add -A", { cwd: repo });
-  execSync(`git commit -m "${message.replace(/"/g, "'")}" || true`, { cwd: repo });
-  execSync("git push", { cwd: repo, stdio: "pipe" });
+  execFileSync("git", ["add", "-A"], { cwd: repo });
+  try {
+    execFileSync("git", ["commit", "-m", message], { cwd: repo, stdio: "pipe" });
+  } catch (err: any) {
+    const out = String(err?.stdout || err?.stderr || err?.message || "");
+    if (!/nothing to commit|working tree clean/i.test(out)) throw err;
+  }
+  execFileSync("git", ["push"], { cwd: repo, stdio: "pipe" });
 };
 
 router.get("/", (req, res) => {
@@ -112,6 +121,8 @@ router.post("/", requireAdmin, (req, res) => {
 
 router.put("/:filename", requireAdmin, (req, res) => {
   const { filename } = req.params;
+  if (!isValidFilename(filename))
+    return res.status(400).json({ error: "Nom de fichier invalide" });
   const filePath = path.join(GAMES_PATH, filename);
   if (!fs.existsSync(filePath))
     return res.status(404).json({ error: "Fichier non trouvé" });

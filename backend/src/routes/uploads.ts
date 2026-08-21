@@ -23,13 +23,19 @@ const createStorage = (dest: string) =>
     },
   });
 
+const IMAGE_EXT_RE = /\.(png|jpe?g|webp|gif)$/i;
+const isImage = (f: Express.Multer.File) =>
+  f.mimetype.startsWith("image/") &&
+  f.mimetype !== "image/svg+xml" &&
+  IMAGE_EXT_RE.test(f.originalname);
+
 const upload = {
   icon: multer({
     storage: createStorage(PATHS.ICONS),
     limits: { fileSize: 5 * 1024 * 1024 },
     fileFilter: (_r, f, cb) => {
-      if (!f.mimetype.startsWith("image/"))
-        return cb(new Error("Fichier image attendu") as any, false);
+      if (!isImage(f))
+        return cb(new Error("Image attendue (png, jpg, webp, gif)") as any, false);
       cb(null, true);
     },
   }),
@@ -37,8 +43,8 @@ const upload = {
     storage: createStorage(PATHS.SCREENSHOTS),
     limits: { fileSize: 20 * 1024 * 1024 },
     fileFilter: (_r, f, cb) => {
-      if (!f.mimetype.startsWith("image/"))
-        return cb(new Error("Fichier image attendu") as any, false);
+      if (!isImage(f))
+        return cb(new Error("Image attendue (png, jpg, webp, gif)") as any, false);
       cb(null, true);
     },
   }),
