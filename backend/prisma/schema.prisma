@@ -102,3 +102,16 @@ model GameRequestVote {
   @@id([requestId, userId])
   @@map("game_request_vote")
 }
+
+// --- Téléchargements (tracking BDD) ---
+model DownloadLog {
+  id        String   @id @default(cuid())
+  game      String   // nom du fichier (ex: "Kirby.nds")
+  title     String?  // titre du jeu (pour les stats)
+  userAgent String?  // "NDS-Shop-v1.0.0"
+  ip        String?  // IP anonymisée (optionnel)
+  createdAt DateTime @default(now())
+
+  @@index([game])
+  @@index([createdAt])
+}

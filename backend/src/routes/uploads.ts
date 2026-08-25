@@ -91,7 +91,7 @@ router.post(
 router.post("/nds", upload.nds.single("nds"), (req, res) => {
   if (!req.file) return res.status(400).json({ error: "Aucun fichier reçu" });
   res.json({
-    url: `https://db-nds-shop.fr/games/${encodeURIComponent(req.file.filename)}`,
+    url: `https://db-nds-shop.fr/api/v1/download/${encodeURIComponent(req.file.filename)}`,
     name: req.file.filename,
   });
 });
