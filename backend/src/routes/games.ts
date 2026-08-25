@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import { execFileSync } from "child_process";
 import { requireAdmin } from "../middleware/auth.ts";
+import prisma from "../lib/prisma.ts";
 
 const router = express.Router();
 const GAMES_PATH = process.env.GAMES_PATH!;
@@ -14,6 +15,49 @@ const isValidFilename = (name: string) =>
 
 const formatDate = () =>
   new Date().toISOString().replace(/\.\d{3}Z$/, "+02:00");
+
+// Même normalisation que le frontend (RequestGame.tsx) pour matcher les demandes
+const normTitle = (s: string) =>
+  s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[()[\],.'"]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const baseTitle = (s: string) => {
+  // ponytail: strip répété jusqu'à stabilité — sinon "Emeraude (Europe)" → "…emeraude"
+  // mais "Emeraude" seul → "…emerau" (le "de" d'Allemagne est striper d'un seul côté)
+  let out = normTitle(s);
+  let prev: string;
+  do {
+    prev = out;
+    out = out
+      .replace(/\s*(france|europe|usa|japan|asia|australia|en|fr|de|es|it|jp)\s*$/i, "")
+      .trim();
+  } while (out !== prev);
+  return out;
+};
+
+// Purge les demandes de jeux satisfaites par l'ajout d'un jeu au catalogue
+// ponytail: non bloquant — si la BDD est down, la création du jeu réussit quand même
+async function purgeRequests(title: string) {
+  try {
+    const requests = await prisma.gameRequest.findMany();
+    const t = normTitle(title);
+    const b = baseTitle(title);
+    const ids = requests
+      .filter((r) => normTitle(r.title) === t || (b.length >= 3 && baseTitle(r.title) === b))
+      .map((r) => r.id);
+    if (ids.length > 0) {
+      await prisma.gameRequest.deleteMany({ where: { id: { in: ids } } });
+      console.log(`🧹 ${ids.length} demande(s) purgée(s) après ajout de "${title}"`);
+    }
+  } catch (err) {
+    console.error("⚠️ Purge des demandes échouée:", err);
+  }
+}
 
 const generateScripts = (downloads: any, screenshots: any[] = []) => {
   const scripts: Record<string, any[]> = {};
@@ -87,7 +131,7 @@ router.get("/", (req, res) => {
   }
 });
 
-router.post("/", requireAdmin, (req, res) => {
+router.post("/", requireAdmin, async (req, res) => {
   const { title, titleId, downloads, screenshots } = req.body;
   if (!title) return res.status(400).json({ error: "Titre requis" });
 
@@ -116,6 +160,7 @@ router.post("/", requireAdmin, (req, res) => {
       .status(500)
       .json({ message: "Jeu créé localement mais échec du push git", fileName });
   }
+  await purgeRequests(title);
   res.json({ message: "Jeu créé !", fileName });
 });
 
