@@ -23,7 +23,10 @@ CREATE TABLE IF NOT EXISTS game_request_vote (
   PRIMARY KEY (requestId, userId)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
+-- NB : pas de IF NOT EXISTS sur le ADD CONSTRAINT (non supporté par toutes les
+-- versions de MariaDB) — si cette contrainte existe déjà, la ligne échouera,
+-- c'est simplement que la migration a déjà été appliquée.
 ALTER TABLE game_request_vote
-  ADD CONSTRAINT IF NOT EXISTS game_request_vote_requestId_fkey
+  ADD CONSTRAINT game_request_vote_requestId_fkey
   FOREIGN KEY (requestId) REFERENCES game_request(id)
   ON DELETE CASCADE ON UPDATE CASCADE;
