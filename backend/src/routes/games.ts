@@ -167,7 +167,7 @@ router.post("/", requireAdmin, async (req, res) => {
   res.json({ message: "Jeu créé !", fileName });
 });
 
-router.put("/:filename", requireAdmin, (req, res) => {
+router.put("/:filename", requireAdmin, async (req, res) => {
   const { filename } = req.params;
   if (!isValidFilename(filename))
     return res.status(400).json({ error: "Nom de fichier invalide" });
