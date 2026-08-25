@@ -1,6 +1,6 @@
 import { Outlet, NavLink, useLocation } from "react-router-dom";
 import {
-  LayoutDashboard, Gamepad2, Users, UsersRound, Hammer, Settings, LogOut, BarChart3,
+  LayoutDashboard, Gamepad2, Users, UsersRound, Hammer, Settings, LogOut, BarChart3, Inbox,
 } from "lucide-react";
 import { DarkModeToggle } from "./DarkModeToggle";
 import { LangToggle } from "./LangToggle";
@@ -23,6 +23,7 @@ export default function Layout() {
     { to: "/dashboard", label: t("nav.dashboard"), icon: LayoutDashboard, adminOnly: false },
     { to: "/stats", label: t("nav.stats"), icon: BarChart3, adminOnly: false },
     { to: "/games", label: t("nav.games"), icon: Gamepad2, adminOnly: false },
+    { to: "/requests", label: t("requests.title"), icon: Inbox, adminOnly: false },
     { to: "/users", label: t("nav.users"), icon: Users, adminOnly: true },
     { to: "/team", label: t("nav.team"), icon: UsersRound, adminOnly: true },
     { to: "/build", label: t("nav.build"), icon: Hammer, adminOnly: false },

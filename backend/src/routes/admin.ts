@@ -221,6 +221,41 @@ router.get("/users", requireAdmin, async (_req, res) => {
   res.json(users);
 });
 
+// ---- Demandes de jeux (table game_request) ----
+
+// GET /api/admin/requests — liste publique des demandes en attente
+router.get("/requests", requireAuth, async (_req, res) => {
+  try {
+    const rows = await prisma.gameRequest.findMany({
+      include: { _count: { select: { votes: true } } },
+      orderBy: [{ votes: { _count: "desc" } }, { createdAt: "desc" }],
+    });
+    res.json(
+      rows.map((r) => ({
+        id: r.id,
+        title: r.title,
+        systems: r.systems,
+        note: r.note,
+        requester: r.requesterName,
+        createdAt: r.createdAt,
+        votes: r._count.votes,
+      })),
+    );
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/admin/requests/:id — suppression manuelle (admin seulement)
+router.delete("/requests/:id", requireAdmin, async (req, res) => {
+  try {
+    await prisma.gameRequest.delete({ where: { id: req.params.id } });
+    res.json({ ok: true });
+  } catch {
+    res.status(404).json({ error: "Demande introuvable" });
+  }
+});
+
 // ---- Discord / Équipe ----
 
 // GET /api/admin/discord/guild — infos du serveur Discord

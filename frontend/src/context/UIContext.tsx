@@ -67,6 +67,20 @@ const fr: Record<string, string> = {
   "nav.backoffice": "Back-office",
   "nav.menu": "Menu",
 
+  // Requests (demandes de jeux)
+  "requests.title": "Demandes de jeux",
+  "requests.subtitle": "Demandes en attente depuis le site public.",
+  "requests.refresh": "Rafraîchir",
+  "requests.systemsCol": "Systèmes",
+  "requests.requesterCol": "Demandeur",
+  "requests.dateCol": "Date",
+  "requests.votesCol": "Votes",
+  "requests.delete": "Supprimer",
+  "requests.confirmDelete": "Supprimer cette demande ?",
+  "requests.deleted": "Demande supprimée",
+  "requests.empty": "Aucune demande en attente.",
+  "requests.anonymous": "Anonyme",
+
   // Login
   "login.title": "Connexion",
   "login.subtitle": "Connectez-vous pour accéder au back-office.",
@@ -300,6 +314,20 @@ const en: Record<string, string> = {
   "nav.logout": "Log out",
   "nav.backoffice": "Back-office",
   "nav.menu": "Menu",
+
+  // Requests (game requests)
+  "requests.title": "Game requests",
+  "requests.subtitle": "Pending requests from the public site.",
+  "requests.refresh": "Refresh",
+  "requests.systemsCol": "Systems",
+  "requests.requesterCol": "Requester",
+  "requests.dateCol": "Date",
+  "requests.votesCol": "Votes",
+  "requests.delete": "Delete",
+  "requests.confirmDelete": "Delete this request?",
+  "requests.deleted": "Request deleted",
+  "requests.empty": "No pending requests.",
+  "requests.anonymous": "Anonymous",
 
   "login.title": "Sign in",
   "login.subtitle": "Sign in to access the back-office.",

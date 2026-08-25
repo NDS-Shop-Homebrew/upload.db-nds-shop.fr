@@ -7,6 +7,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Stats from "./pages/Stats";
 import Games from "./pages/Games";
+import Requests from "./pages/Requests";
 import Users from "./pages/Users";
 import Team from "./pages/Team";
 import Build from "./pages/Build";
@@ -31,6 +32,7 @@ export default function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/stats" element={<Stats />} />
           <Route path="/games" element={<Games />} />
+          <Route path="/requests" element={<Requests />} />
           <Route path="/users" element={<AdminRoute><Users /></AdminRoute>} />
           <Route path="/team" element={<AdminRoute><Team /></AdminRoute>} />
           <Route path="/build" element={<Build />} />
