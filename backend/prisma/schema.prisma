@@ -1,4 +1,8 @@
 
+// Schéma Prisma MAÎTRE — couvre TOUTES les tables (auth + site + bot).
+// ⚠️ `prisma db push` / migrations uniquement depuis CE repo (upload.db-nds-shop.fr).
+// Les repos db-nds-shop et NDS-Shop-Bot ne font que `prisma generate`
+// avec des schémas partiels répliqués (jamais de db push chez eux).
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
@@ -114,4 +118,173 @@ model DownloadLog {
 
   @@index([game])
   @@index([createdAt])
+  @@map("DownloadLog")
+}
+
+// ============================================================
+// BOT DISCORD (NDS-Shop-Bot) — tables bot_*
+// Le schéma du bot est une réplique generate-only ; c'est ICI la source de vérité.
+// `prisma db push` uniquement depuis ce repo.
+// ============================================================
+
+model BotAnnouncement {
+  id        String    @id @default(cuid())
+  title     String    @db.Text
+  content   String    @db.Text
+  channel   String    @db.Text
+  status    String    @default("draft")
+  createdAt DateTime  @default(now())
+  sentAt    DateTime?
+  sentBy    String?   @db.Text
+
+  @@map("bot_announcement")
+}
+
+model BotSetting {
+  key   String @id
+  value String @db.Text
+
+  @@map("bot_setting")
+}
+
+model BotLog {
+  id        String   @id @default(cuid())
+  level     String   @default("info")
+  message   String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@map("bot_log")
+}
+
+model BotTicket {
+  id         String              @id @default(cuid())
+  userId     String              @db.Text
+  username   String?             @db.Text
+  category   String              @db.Text
+  threadId   String?             @db.Text
+  status     String              @default("open")
+  createdAt  DateTime            @default(now())
+  closedAt   DateTime?
+  messages   BotTicketMessage[]
+
+  @@map("bot_ticket")
+}
+
+model BotTicketMessage {
+  id        String   @id @default(cuid())
+  ticketId  String
+  ticket    BotTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorId  String   @db.Text
+  author    String   @db.Text
+  content   String   @db.Text
+  direction String   @default("user")
+  createdAt DateTime @default(now())
+
+  @@map("bot_ticket_message")
+}
+
+model BotUserProfile {
+  id           String    @id @default(cuid())
+  discordId    String    @unique
+  xp           BigInt    @default(0)
+  level        Int       @default(1)
+  favorites    String?   @db.Text
+  watched      String?   @db.Text
+  lastXpAt     DateTime?
+  totalMsgs    Int       @default(0)
+  badge        String?   @db.Text
+  updatedAt    DateTime  @updatedAt
+
+  @@map("bot_user_profile")
+}
+
+model BotGameSub {
+  id        String @id @default(cuid())
+  discordId String @unique
+  games     String @db.Text
+
+  @@map("bot_game_sub")
+}
+
+model BotReminder {
+  id        String    @id @default(cuid())
+  discordId String    @db.Text
+  content   String    @db.Text
+  channelId String?   @db.Text
+  dueAt     DateTime
+  sent      Boolean   @default(false)
+  createdAt DateTime  @default(now())
+
+  @@map("bot_reminder")
+}
+
+model BotCommandLog {
+  id        String    @id @default(cuid())
+  userId    String    @db.Text
+  username  String?   @db.Text
+  command   String    @db.Text
+  options   String?   @db.Text
+  createdAt DateTime  @default(now())
+
+  @@map("bot_command_log")
+}
+
+model BotBlacklist {
+  id        String    @id @default(cuid())
+  discordId String    @unique
+  reason    String?   @db.Text
+  createdAt DateTime  @default(now())
+
+  @@map("bot_blacklist")
+}
+
+model BotWarn {
+  id        String    @id @default(cuid())
+  discordId String    @db.Text
+  modId     String?   @db.Text
+  reason    String?   @db.Text
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@map("bot_warn")
+}
+
+model BotDmContact {
+  id          String         @id @default(cuid())
+  discordId   String         @unique
+  username    String         @db.Text
+  lastMessage String?        @db.Text
+  lastAt      DateTime       @default(now())
+  unreadCount Int            @default(0)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  messages    BotDmMessage[]
+
+  @@map("bot_dm_contact")
+}
+
+model BotDmMessage {
+  id        String       @id @default(cuid())
+  contactId String
+  contact   BotDmContact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  direction String       @default("user") // user | staff
+  authorId  String       @db.Text
+  author    String       @db.Text
+  content   String       @db.Text
+  createdAt DateTime     @default(now())
+
+  @@map("bot_dm_message")
+}
+
+// Demandes de jeux issues du forum Discord (bot) — table distincte de game_request (site)
+model BotGameRequest {
+  id        String   @id @default(cuid())
+  threadId  String   @unique @db.VarChar(32)
+  discordId String   @db.VarChar(32)
+  title     String   @db.Text
+  tagId     String?  @db.VarChar(32)
+  status    String   @default("Demandé")
+  createdAt DateTime @default(now())
+
+  @@map("bot_game_request")
 }
