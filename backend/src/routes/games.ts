@@ -4,6 +4,7 @@ import path from "path";
 import { execFileSync } from "child_process";
 import { requireAdmin } from "../middleware/auth.ts";
 import prisma from "../lib/prisma.ts";
+import { upsertNdsdbEntry } from "../lib/ndsdb.ts";
 
 const router = express.Router();
 const GAMES_PATH = process.env.GAMES_PATH!;
@@ -160,6 +161,8 @@ router.post("/", requireAdmin, async (req, res) => {
       .status(500)
       .json({ message: "Jeu créé localement mais échec du push git", fileName });
   }
+  // Fiche ndsdb pour la page détail du site (non bloquant) + purge des demandes satisfaites
+  await upsertNdsdbEntry(gameData);
   await purgeRequests(title);
   res.json({ message: "Jeu créé !", fileName });
 });
@@ -189,6 +192,7 @@ router.put("/:filename", requireAdmin, (req, res) => {
       .status(500)
       .json({ message: "Jeu mis à jour mais échec du push git" });
   }
+  await upsertNdsdbEntry(gameData);
   res.json({ message: "Jeu mis à jour !" });
 });
 
