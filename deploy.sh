@@ -30,6 +30,16 @@ FAILED=()
 # Crée le dossier de backups
 mkdir -p "$BACKUP_DIR"
 
+backup_database() {
+  local backup_file="$BACKUP_DIR/ndsshop_$(date +%Y%m%d_%H%M%S).sql"
+  log_info "Création de la sauvegarde MySQL..."
+  if sudo mysqldump -u root --no-tablespaces "$DB_NAME" > "$backup_file"; then
+    log_success "Sauvegarde créée : $(basename "$backup_file") ($(du -h "$backup_file" | cut -f1))"
+  else
+    log_warn "Échec de la sauvegarde MySQL (accès sudo / droits vérifiés ?)"
+  fi
+}
+
 for entry in "${REPOS[@]}"; do
   IFS='|' read -r name dir app <<< "$entry"
   echo -e "\n${C_CYAN}${C_BOLD}=== $name ($dir) ===${C_RESET}"
@@ -55,52 +65,54 @@ for entry in "${REPOS[@]}"; do
 
   case "$name" in
     admin)
-      SCHEMA_DIFF=$(git diff --name-only "$OLD_HEAD"..HEAD -- backend/prisma/schema.prisma || true)
-      
+      # Sauvegarde BDD systématique avant toute manipulation
+      backup_database
+
+      SCHEMA_DIFF=$(git diff --name-only "$OLD_HEAD"..HEAD | grep -E "schema\.prisma" || true)
+
       (cd backend && npm install && npx prisma generate) || {
         log_error "npm install ou prisma generate KO pour $name"
         FAILED+=("$name")
         continue
       }
-      
+
       if [ -n "$SCHEMA_DIFF" ]; then
-        log_warn "schema.prisma modifié -> backup BDD + db push"
-        sudo mysqldump -u root --no-tablespaces "$DB_NAME" > "$BACKUP_DIR/ndsshop_$(date +%Y%m%d_%H%M%S).sql"
+        log_warn "schema.prisma modifié -> exécution de db push"
         (cd backend && npx prisma db push) || {
           log_error "prisma db push KO pour $name"
           FAILED+=("$name")
           continue
         }
       fi
-      
+
       (cd frontend && npm install && npm run build) || {
         log_error "build frontend KO pour $name"
         FAILED+=("$name")
         continue
       }
       ;;
-      
+
     db)
       (cd backend && npm install && npx prisma generate && npx tsc) || {
         log_error "npm install ou build backend KO pour $name"
         FAILED+=("$name")
         continue
       }
-      
+
       (cd frontend && npm install && npm run build) || {
         log_error "build frontend KO pour $name"
         FAILED+=("$name")
         continue
       }
       ;;
-      
+
     bot)
       (npm install) || {
         log_error "npm install KO pour $name"
         FAILED+=("$name")
         continue
       }
-      
+
       if [ -d prisma ]; then
         (npx prisma generate) || {
           log_error "prisma generate KO pour $name"
@@ -108,7 +120,7 @@ for entry in "${REPOS[@]}"; do
           continue
         }
       fi
-      
+
       if [ -d frontend ]; then
         (cd frontend && npm install && npm run build) || {
           log_error "build frontend KO pour $name"
