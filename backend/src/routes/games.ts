@@ -1,5 +1,4 @@
 import express from "express";
-import { execFileSync } from "child_process";
 import { requireAdmin } from "../middleware/auth";
 import prisma from "../lib/prisma";
 import { upsertNdsdbEntry } from "../lib/ndsdb";
@@ -49,51 +48,85 @@ async function purgeRequests(title: string) {
   }
 }
 
-// Génère les scripts d'installation pour chaque ROM
-const generateScripts = (
+// Génère la liste d'actions d'installation à plat pour Prisma GameScript
+const generatePrismaScripts = (
   downloads: Record<string, { url: string }>,
   screenshots: { url: string }[],
 ) => {
-  const scripts: Record<string, any[]> = {};
+  const scriptEntries: {
+    name: string;
+    type: string;
+    file: string;
+    output: string | null;
+  }[] = [];
+
   Object.keys(downloads).forEach((ndsName) => {
-    const script: any[] = [];
+    // 1. Screenshots
     screenshots.forEach((ss) => {
-      script.push({
+      const fileName = ss.url.split("/").pop() || "screenshot.png";
+      scriptEntries.push({
+        name: ndsName,
         type: "downloadFile",
         file: ss.url,
-        output: `/photos/${ss.url.split("/").pop()}`,
+        output: `/photos/${fileName}`,
       });
     });
-    script.push({
+
+    // 2. ROM NDS
+    scriptEntries.push({
+      name: ndsName,
       type: "downloadFile",
       file: `https://db-nds-shop.fr/games/${encodeURIComponent(ndsName)}`,
       output: `/roms/nds/${ndsName}`,
     });
+
+    // 3. CIA Forwarder
     const ciaName = ndsName.replace(/\.nds$/i, ".cia");
-    script.push({
+    scriptEntries.push({
+      name: ndsName,
       type: "downloadFile",
       file: `https://db-nds-shop.fr/forwarder/${encodeURIComponent(ciaName)}`,
       output: `/${ciaName}`,
     });
-    script.push({ type: "installCia", file: `/${ciaName}` });
-    script.push({ type: "deleteFile", file: `/${ciaName}` });
-    scripts[ndsName] = script;
+    scriptEntries.push({
+      name: ndsName,
+      type: "installCia",
+      file: `/${ciaName}`,
+      output: null,
+    });
+    scriptEntries.push({
+      name: ndsName,
+      type: "deleteFile",
+      file: `/${ciaName}`,
+      output: null,
+    });
   });
-  return scripts;
+
+  return scriptEntries;
 };
 
 // Convertit un game Prisma en format JSON compat frontend
 const gameToJson = (game: any) => {
   const downloads: Record<string, any> = {};
   (game.downloads || []).forEach((d: any) => {
-    downloads[d.fileName] = { url: d.url, size: d.size ? Number(d.size) : null };
+    downloads[d.filename] = { url: d.url, size: d.size != null ? Number(d.size) : null };
   });
-  const scripts: Record<string, any> = {};
+
+  const scripts: Record<string, any[]> = {};
   (game.scripts || []).forEach((s: any) => {
-    scripts[s.name] = s.script;
+    if (!scripts[s.name]) {
+      scripts[s.name] = [];
+    }
+    scripts[s.name].push({
+      type: s.type,
+      file: s.file,
+      ...(s.output ? { output: s.output } : {}),
+    });
   });
+
   return {
     ...game,
+    description: game.descriptionMd ?? game.description ?? "",
     downloads,
     scripts,
     updated: game.updatedAt?.toISOString?.() || game.updatedAt,
@@ -109,11 +142,18 @@ const slugify = (s: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
 
+// Parse size proprement en BigInt / Number ou null
+const parseSize = (size: any): bigint | null => {
+  if (size === null || size === undefined || size === "") return null;
+  const n = Number(size);
+  return isNaN(n) ? null : BigInt(Math.floor(n));
+};
+
 // ─── GET / ──────────────────────────────────────────────────
 router.get("/", async (_req, res) => {
   try {
     const games = await prisma.game.findMany({
-      include: { downloads: true, scripts: true },
+      include: { downloads: true, scripts: true, screenshots: true },
       orderBy: { title: "asc" },
     });
     res.json(games.map(gameToJson));
@@ -155,18 +195,17 @@ router.post("/", requireAdmin, async (req, res) => {
   }
 
   const slug = slugify(title);
-  const scripts = generateScripts(downloads, screenshots);
+  const prismaScripts = generatePrismaScripts(downloads, screenshots);
 
   try {
     const game = await prisma.game.create({
       data: {
         id: slug,
-        slug,
         title,
         titleId: titleId || null,
-        systems: rest.systems || ["DS"],
-        genres: rest.genres || [],
-        categories: rest.categories || [],
+        systems: JSON.stringify(rest.systems || ["DS"]),
+        genres: JSON.stringify(rest.genres || []),
+        categories: JSON.stringify(rest.categories || []),
         color: rest.color || null,
         colorBg: rest.colorBg || null,
         priority: rest.priority || false,
@@ -178,24 +217,21 @@ router.post("/", requireAdmin, async (req, res) => {
         developer: rest.developer || null,
         publisher: rest.publisher || null,
         version: rest.version || null,
-        descriptionMd: rest.description || null,
+        descriptionMd: rest.descriptionMd || rest.description || null,
         // Sous-tables
         downloads: {
           create: Object.entries(downloads).map(([fileName, dl]: [string, any]) => ({
-            fileName,
+            filename: fileName,
             url: dl.url || "",
-            size: dl.size || null,
+            size: parseSize(dl.size),
             type: fileName.endsWith(".cia") ? "cia" : "nds",
           })),
         },
         scripts: {
-          create: Object.entries(scripts).map(([name, script]) => ({
-            name,
-            script,
-          })),
+          create: prismaScripts,
         },
       },
-      include: { downloads: true, scripts: true },
+      include: { downloads: true, scripts: true, screenshots: true },
     });
 
     // NDSDB + purge (non bloquant)
@@ -218,19 +254,25 @@ router.put("/:id", requireAdmin, async (req, res) => {
     const existing = await prisma.game.findUnique({ where: { id } });
     if (!existing) return res.status(404).json({ error: "Jeu non trouvé" });
 
-    const slug = rest.title ? slugify(rest.title) : existing.slug;
-    const scripts = generateScripts(downloads, screenshots);
+    const existingData = existing as Record<string, any>;
+    const prismaScripts = generatePrismaScripts(downloads, screenshots);
+
+    const descriptionValue =
+      rest.descriptionMd !== undefined
+        ? rest.descriptionMd
+        : rest.description !== undefined
+        ? rest.description
+        : existingData.descriptionMd ?? existingData.description ?? null;
 
     // Mettre à jour le jeu + resync sous-tables
     const game = await prisma.game.update({
       where: { id },
       data: {
-        slug,
         title: rest.title || existing.title,
         titleId: rest.titleId !== undefined ? rest.titleId : existing.titleId,
-        systems: rest.systems || existing.systems,
-        genres: rest.genres || existing.genres,
-        categories: rest.categories || existing.categories,
+        systems: rest.systems ? JSON.stringify(rest.systems) : existing.systems,
+        genres: rest.genres ? JSON.stringify(rest.genres) : existing.genres,
+        categories: rest.categories ? JSON.stringify(rest.categories) : existing.categories,
         color: rest.color !== undefined ? rest.color : existing.color,
         colorBg: rest.colorBg !== undefined ? rest.colorBg : existing.colorBg,
         priority: rest.priority !== undefined ? rest.priority : existing.priority,
@@ -242,27 +284,24 @@ router.put("/:id", requireAdmin, async (req, res) => {
         developer: rest.developer !== undefined ? rest.developer : existing.developer,
         publisher: rest.publisher !== undefined ? rest.publisher : existing.publisher,
         version: rest.version !== undefined ? rest.version : existing.version,
-        descriptionMd: rest.description !== undefined ? rest.description : existing.descriptionMd,
+        ...(descriptionValue !== undefined ? { descriptionMd: descriptionValue } : {}),
         // Resync downloads
         downloads: {
           deleteMany: {},
           create: Object.entries(downloads).map(([fileName, dl]: [string, any]) => ({
-            fileName,
+            filename: fileName,
             url: dl.url || "",
-            size: dl.size || null,
+            size: parseSize(dl.size),
             type: fileName.endsWith(".cia") ? "cia" : "nds",
           })),
         },
         // Resync scripts
         scripts: {
           deleteMany: {},
-          create: Object.entries(scripts).map(([name, script]) => ({
-            name,
-            script,
-          })),
+          create: prismaScripts,
         },
       },
-      include: { downloads: true, scripts: true },
+      include: { downloads: true, scripts: true, screenshots: true },
     });
 
     // NDSDB + purge (non bloquant)

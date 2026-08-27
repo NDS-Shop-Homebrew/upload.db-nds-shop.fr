@@ -3,12 +3,12 @@ import dotenv from "dotenv";
 import cors from "cors";
 import morgan from "morgan";
 import { toNodeHandler } from "better-auth/node";
-import { auth } from "./lib/auth";
 import uploadRoutes from "./routes/uploads";
 import gameRoutes from "./routes/games";
 import analyzeRoutes from "./routes/analyze";
 import buildRoutes from "./routes/build";
 import adminRoutes from "./routes/admin";
+import { auth } from "./lib/auth";
 
 dotenv.config();
 

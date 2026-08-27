@@ -35,6 +35,9 @@ export interface NdsMetadata {
   titles: Record<string, string>;
   icon: string; // data URL PNG 48x48 (store convention)
   iconBytes: number;
+  developer?: string;
+  publisher?: string;
+  genres?: string[];
 }
 
 let crcTable: Int32Array | null = null;
