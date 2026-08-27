@@ -1,0 +1,112 @@
+version: '3.8'
+
+services:
+  # Base de données MySQL
+  db:
+    image: mysql:8.0
+    container_name: nds-shop-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-ndsshop}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_USER: ${MYSQL_USER:-nds}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - /srv/nds-shop/db:/var/lib/mysql
+    networks:
+      - nds-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # API Build Pipeline (génère les fichiers statiques)
+  api:
+    build:
+      context: ./api.db-nds-shop
+      dockerfile: Dockerfile
+    container_name: nds-shop-api
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: mysql://${MYSQL_USER:-nds}:${MYSQL_PASSWORD}@db:3306/${MYSQL_DATABASE:-ndsshop}
+      PORT: 3000
+    volumes:
+      - /srv/nds-shop/assets:/assets
+      - /srv/nds-shop/frontend/public:/app/frontend/public
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - nds-network
+
+  # Backend Admin (upload.db-nds-shop.fr)
+  upload:
+    build:
+      context: ./upload.db-nds-shop.fr/backend
+      dockerfile: Dockerfile
+    container_name: nds-shop-upload
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3002
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-https://upload.db-nds-shop.fr}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      DATABASE_URL: mysql://${MYSQL_USER:-nds}:${MYSQL_PASSWORD}@db:3306/${MYSQL_DATABASE:-ndsshop}
+      DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN}
+      DISCORD_GUILD_ID: ${DISCORD_GUILD_ID}
+      ICONS_PATH: /assets/icons
+      SCREENSHOTS_PATH: /assets/screenshots
+      ROMS_PATH: /assets/roms
+      FORWARDER_PATH: /assets/forwarder
+    volumes:
+      - /srv/nds-shop/assets:/assets
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - nds-network
+
+  # Bot Discord
+  bot:
+    build:
+      context: ./NDS-Shop-Bot
+      dockerfile: Dockerfile
+    container_name: nds-shop-bot
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: mysql://${MYSQL_USER:-nds}:${MYSQL_PASSWORD}@db:3306/${MYSQL_DATABASE:-ndsshop}
+      DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN}
+      DISCORD_GUILD_ID: ${DISCORD_GUILD_ID}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-https://upload.db-nds-shop.fr}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - nds-network
+
+  # Générateur de build statique (site principal)
+  # S'exécute une fois au déploiement, puis s'arrête
+  build-site:
+    build:
+      context: ./db-nds-shop
+      dockerfile: Dockerfile
+    container_name: nds-shop-build
+    environment:
+      DATABASE_URL: mysql://${MYSQL_USER:-nds}:${MYSQL_PASSWORD}@db:3306/${MYSQL_DATABASE:-ndsshop}
+    volumes:
+      - /srv/nds-shop/assets:/assets
+      - /srv/nds-shop/frontend/public:/app/frontend/public
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - nds-network
+    profiles:
+      - build
+
+networks:
+  nds-network:
+    driver: bridge
