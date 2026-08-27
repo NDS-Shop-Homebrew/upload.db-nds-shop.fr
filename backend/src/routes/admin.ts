@@ -16,6 +16,7 @@ const BUILD_LOG = path.join(
   path.dirname(new URL(import.meta.url).pathname),
   "../../build.log"
 );
+const LOG_FILE: string = BUILD_LOG;
 
 // Discord (bot pour lister les membres du serveur)
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN || "";
@@ -112,7 +113,7 @@ router.get("/stats", requireAuth, async (_req, res) => {
       fs.existsSync(ROMS_PATH)
         ? fs.readdirSync(ROMS_PATH).filter((f) => f.endsWith(".nds")).length
         : 0,
-      fs.existsSync(BUILD_LOG) ? fs.readFileSync(BUILD_LOG, "utf8") : "",
+      fs.existsSync(LOG_FILE) ? fs.readFileSync(LOG_FILE, "utf8") : "",
       prisma.user.findMany({ select: { createdAt: true } }),
     ]);
 
@@ -135,7 +136,7 @@ router.get("/stats", requireAuth, async (_req, res) => {
       }
       recentGames = all
         .map(({ g }) => ({ title: g.title || "?", updated: g.updated || "" }))
-        .sort((a, b) => (b.updated || "").localeCompare(a.updated || ""))
+        .sort((a: { updated: string }, b: { updated: string }) => (b.updated || "").localeCompare(a.updated || ""))
         .slice(0, 8);
       for (const { f, g } of all) {
         const hasRom = Object.keys(g.downloads || {}).some((k: string) => k.endsWith(".nds"));
@@ -154,8 +155,8 @@ router.get("/stats", requireAuth, async (_req, res) => {
         }
         const ver = g.version || "?";
         versionCounts[ver] = (versionCounts[ver] || 0) + 1;
-        for (const s of g.systems || []) systemCounts[s] = (systemCounts[s] || 0) + 1;
-        for (const c of g.categories || []) categoryCounts[c] = (categoryCounts[c] || 0) + 1;
+        for (const s of (g.systems || []) as string[]) systemCounts[s] = (systemCounts[s] || 0) + 1;
+        for (const c of (g.categories || []) as string[]) categoryCounts[c] = (categoryCounts[c] || 0) + 1;
         const m = (g.updated || "").slice(0, 7);
         if (m) gamesByMonth[m] = (gamesByMonth[m] || 0) + 1;
       }
@@ -174,7 +175,7 @@ router.get("/stats", requireAuth, async (_req, res) => {
       byGame[title] = (byGame[title] || 0) + n;
     }
     const topGames = Object.entries(byGame)
-      .sort((a, b) => b[1] - a[1])
+      .sort((a: [string, number], b: [string, number]) => b[1] - a[1])
       .slice(0, 10)
       .map(([title, count]) => ({ title, count }));
 
@@ -226,19 +227,19 @@ router.get("/users", requireAdmin, async (_req, res) => {
 // GET /api/admin/requests — liste publique des demandes en attente
 router.get("/requests", requireAuth, async (_req, res) => {
   try {
-    const rows = await prisma.gameRequest.findMany({
+    const rows = (await prisma.gameRequest.findMany({
       include: { _count: { select: { votes: true } } },
       orderBy: [{ votes: { _count: "desc" } }, { createdAt: "desc" }],
-    });
+    })) as any[];
     res.json(
       rows.map((r) => ({
-        id: r.id,
-        title: r.title,
-        systems: r.systems,
-        note: r.note,
-        requester: r.requesterName,
-        createdAt: r.createdAt,
-        votes: r._count.votes,
+        id: r.id as string,
+        title: r.title as string,
+        systems: r.systems as string[],
+        note: r.note as string,
+        requester: r.requesterName as string,
+        createdAt: r.createdAt as Date,
+        votes: r._count.votes as number,
       })),
     );
   } catch (err: any) {
@@ -261,14 +262,14 @@ router.delete("/requests/:id", requireAdmin, async (req, res) => {
 // GET /api/admin/discord/guild — infos du serveur Discord
 router.get("/discord/guild", requireAdmin, async (_req, res) => {
   try {
-    const g = await discordApi(`/guilds/${DISCORD_GUILD_ID}?with_counts=true`);
+    const g = (await discordApi(`/guilds/${DISCORD_GUILD_ID}?with_counts=true`)) as any;
     res.json({
-      id: g.id,
-      name: g.name,
+      id: g.id as string,
+      name: g.name as string,
       icon: g.icon ? `https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png` : null,
-      memberCount: g.approximate_member_count,
-      presenceCount: g.approximate_presence_count,
-      description: g.description,
+      memberCount: g.approximate_member_count as number,
+      presenceCount: g.approximate_presence_count as number,
+      description: g.description as string,
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -279,17 +280,17 @@ router.get("/discord/guild", requireAdmin, async (_req, res) => {
 router.get("/discord/members", requireAdmin, async (_req, res) => {
   try {
     const members = await discordApi(`/guilds/${DISCORD_GUILD_ID}/members?limit=1000`);
-    const users = members
+    const users = (members as any[])
       .filter((m: any) => !m.user.bot)
       .map((m: any) => ({
-        id: m.user.id,
-        username: m.user.username,
-        global_name: m.user.global_name || m.user.username,
+        id: m.user.id as string,
+        username: m.user.username as string,
+        global_name: (m.user.global_name || m.user.username) as string,
         avatar: m.user.avatar
           ? `https://cdn.discordapp.com/avatars/${m.user.id}/${m.user.avatar}.png`
           : null,
-        nick: m.nick || null,
-        roles: m.roles,
+        nick: (m.nick || null) as string | null,
+        roles: m.roles as string[],
       }));
     res.json(users);
   } catch (err: any) {

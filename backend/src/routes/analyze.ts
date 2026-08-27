@@ -40,9 +40,11 @@ router.post("/nds", upload.single("nds"), async (req, res) => {
     // Enrichit avec le developer/publisher depuis ndsdb si dispo
     if (meta.titleId) {
       const ndsdb = await fetchNdsdbMeta(meta.titleId);
-      if (ndsdb?.developer) meta.developer = ndsdb.developer;
-      if (ndsdb?.publisher) meta.publisher = ndsdb.publisher;
-      if (ndsdb?.genres?.length) meta.genres = ndsdb.genres;
+      if (ndsdb) {
+        if ((ndsdb as any).developer) meta.developer = (ndsdb as any).developer;
+        if ((ndsdb as any).publisher) meta.publisher = (ndsdb as any).publisher;
+        if ((ndsdb as any).genres?.length) meta.genres = (ndsdb as any).genres;
+      }
     }
 
     res.json(meta);

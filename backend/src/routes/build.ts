@@ -16,6 +16,10 @@ const BUILD_LOG = path.join(
   "../../build.log"
 );
 
+// Correction TypeScript : s'assurer que build.log est défini comme string absolue
+// pour éviter les erreurs lors du build.
+const LOG_FILE: string = BUILD_LOG;
+
 interface BuildState {
   running: boolean;
   status: "none" | "running" | "success" | "failed";
@@ -45,7 +49,7 @@ router.post("/", requireAdmin, (req, res) => {
     startedAt: new Date().toISOString(),
     finishedAt: null,
   };
-  fs.writeFileSync(BUILD_LOG, "");
+  fs.writeFileSync(LOG_FILE, "");
 
   const child = spawn(BUILD_SCRIPT, ["--roms", BUILD_ROMS], {
     cwd: BUILD_CWD,
@@ -56,7 +60,7 @@ router.post("/", requireAdmin, (req, res) => {
     const text = chunk.toString();
     state.log += text;
     try {
-      fs.appendFileSync(BUILD_LOG, text);
+      fs.appendFileSync(LOG_FILE, text);
     } catch {}
   };
   child.stdout.on("data", append);
@@ -67,7 +71,7 @@ router.post("/", requireAdmin, (req, res) => {
     state.running = false;
     state.status = "failed";
     state.finishedAt = new Date().toISOString();
-    fs.writeFileSync(BUILD_LOG, `[${state.finishedAt}] FAILED\n` + state.log);
+    fs.writeFileSync(LOG_FILE, `[${state.finishedAt}] FAILED\n` + state.log);
   });
 
   child.on("close", (code) => {
@@ -76,7 +80,7 @@ router.post("/", requireAdmin, (req, res) => {
     state.finishedAt = new Date().toISOString();
     // Préfixe [date] SUCCESS/FAILED pour que admin.ts détecte le statut
     fs.writeFileSync(
-      BUILD_LOG,
+      LOG_FILE,
       `[${state.finishedAt}] ${code === 0 ? "SUCCESS" : "FAILED"}\n` + state.log
     );
   });
