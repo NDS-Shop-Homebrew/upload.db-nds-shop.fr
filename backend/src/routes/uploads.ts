@@ -1,5 +1,6 @@
 import express from "express";
 import multer from "multer";
+import fs from "fs";
 import path from "path";
 import { requireAdmin } from "../middleware/auth";
 
@@ -8,16 +9,21 @@ const router = express.Router();
 router.use(requireAdmin);
 
 const PATHS = {
-  ICONS: process.env.ICONS_PATH!,
-  SCREENSHOTS: process.env.SCREENSHOTS_PATH!,
-  ROMS: process.env.ROMS_PATH!,
-  FORWARDER: process.env.FORWARDER_PATH!,
+  ICONS: process.env.ICONS_PATH || "/srv/nds-shop/db/frontend/public/assets/images/icons",
+  SCREENSHOTS: process.env.SCREENSHOTS_PATH || "/srv/nds-shop/db/frontend/public/assets/images/boxart",
+  ROMS: process.env.ROMS_PATH || "/srv/nds-shop/roms",
+  FORWARDER: process.env.FORWARDER_PATH || "/srv/nds-shop/db/frontend/public/forwarder",
 };
 
 const createStorage = (dest: string) =>
   multer.diskStorage({
-    destination: dest,
-    filename: (req, file, cb) => {
+    destination: (_req, _file, cb) => {
+      if (!fs.existsSync(dest)) {
+        fs.mkdirSync(dest, { recursive: true });
+      }
+      cb(null, dest);
+    },
+    filename: (_req, file, cb) => {
       const safeName = file.originalname.replace(/[\\/:*?"<>|]/g, "").trim();
       cb(null, safeName);
     },
@@ -73,6 +79,7 @@ router.post("/icon", upload.icon.single("icon"), (req, res) => {
   res.json({
     url: `https://db-nds-shop.fr/assets/images/icons/${encodeURIComponent(req.file.filename)}`,
     name: req.file.filename,
+    size: req.file.size,
   });
 });
 
@@ -84,6 +91,7 @@ router.post(
     res.json({
       url: `https://db-nds-shop.fr/assets/images/boxart/${encodeURIComponent(req.file.filename)}`,
       name: req.file.filename,
+      size: req.file.size,
     });
   },
 );
@@ -93,6 +101,7 @@ router.post("/nds", upload.nds.single("nds"), (req, res) => {
   res.json({
     url: `https://db-nds-shop.fr/api/v1/download/${encodeURIComponent(req.file.filename)}`,
     name: req.file.filename,
+    size: req.file.size,
   });
 });
 
@@ -101,6 +110,7 @@ router.post("/cia", upload.cia.single("cia"), (req, res) => {
   res.json({
     url: `https://db-nds-shop.fr/forwarder/${encodeURIComponent(req.file.filename)}`,
     name: req.file.filename,
+    size: req.file.size,
   });
 });
 

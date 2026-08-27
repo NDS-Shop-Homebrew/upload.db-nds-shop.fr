@@ -5,6 +5,20 @@ import { upsertNdsdbEntry } from "../lib/ndsdb";
 
 const router = express.Router();
 
+// Helper parsing sécurisé
+function safeJsonParse<T>(val: unknown, fallback: T): T {
+  if (!val) return fallback;
+  if (Array.isArray(val) || typeof val === "object") return val as T;
+  if (typeof val === "string") {
+    try {
+      return JSON.parse(val);
+    } catch {
+      return fallback;
+    }
+  }
+  return fallback;
+}
+
 // Même normalisation que le frontend (RequestGame.tsx) pour matcher les demandes
 const normTitle = (s: string) =>
   s
@@ -27,18 +41,17 @@ const baseTitle = (s: string) => {
   return out;
 };
 
-// Purge les demandes de jeux satisfaites par l'ajout d'un jeu au catalogue
 async function purgeRequests(title: string) {
   try {
     const requests = await prisma.gameRequest.findMany();
     const t = normTitle(title);
     const b = baseTitle(title);
     const ids = requests
-      .filter((r) => {
+      .filter((r: any) => {
         const rt = normTitle(r.title);
         return rt === t || rt.includes(b) || b.includes(rt);
       })
-      .map((r) => r.id);
+      .map((r: any) => r.id);
     if (ids.length) {
       await prisma.gameRequest.deleteMany({ where: { id: { in: ids } } });
       console.log(`Purge ${ids.length} demande(s) satisfaite(s) pour "${title}"`);
@@ -126,14 +139,23 @@ const gameToJson = (game: any) => {
 
   return {
     ...game,
+    systems: safeJsonParse<string[]>(game.systems, ["DS"]),
+    genres: safeJsonParse<string[]>(game.genres, []),
+    categories: safeJsonParse<string[]>(game.categories, ["game"]),
+    icon: game.iconUrl || game.icon || "",
+    boxart: game.boxartUrl || game.boxart || "",
     description: game.descriptionMd ?? game.description ?? "",
     downloads,
     scripts,
+    screenshots: (game.screenshots || []).map((s: any) => ({
+      url: s.url,
+      description: s.order === 0 ? "Boxart" : "Screenshot",
+    })),
     updated: game.updatedAt?.toISOString?.() || game.updatedAt,
   };
 };
 
-// Ponytail: s'assurer que le slug existe
+// Génération de slug propre
 const slugify = (s: string) =>
   s
     .toLowerCase()
@@ -205,14 +227,14 @@ router.post("/", requireAdmin, async (req, res) => {
         titleId: titleId || null,
         systems: JSON.stringify(rest.systems || ["DS"]),
         genres: JSON.stringify(rest.genres || []),
-        categories: JSON.stringify(rest.categories || []),
+        categories: JSON.stringify(rest.categories || ["game"]),
         color: rest.color || null,
         colorBg: rest.colorBg || null,
         priority: rest.priority || false,
         stars: rest.stars || 0,
-        iconUrl: rest.icon || null,
-        imageUrl: rest.image || null,
-        boxartUrl: rest.boxart || null,
+        iconUrl: rest.iconUrl || rest.icon || null,
+        imageUrl: rest.imageUrl || rest.image || null,
+        boxartUrl: rest.boxartUrl || rest.boxart || null,
         author: rest.author || null,
         developer: rest.developer || null,
         publisher: rest.publisher || null,
@@ -229,6 +251,12 @@ router.post("/", requireAdmin, async (req, res) => {
         },
         scripts: {
           create: prismaScripts,
+        },
+        screenshots: {
+          create: screenshots.map((s: any, idx: number) => ({
+            url: s.url,
+            order: s.order !== undefined ? s.order : idx,
+          })),
         },
       },
       include: { downloads: true, scripts: true, screenshots: true },
@@ -299,6 +327,14 @@ router.put("/:id", requireAdmin, async (req, res) => {
         scripts: {
           deleteMany: {},
           create: prismaScripts,
+        },
+        // Resync screenshots
+        screenshots: {
+          deleteMany: {},
+          create: screenshots.map((s: any, idx: number) => ({
+            url: s.url,
+            order: s.order !== undefined ? s.order : idx,
+          })),
         },
       },
       include: { downloads: true, scripts: true, screenshots: true },

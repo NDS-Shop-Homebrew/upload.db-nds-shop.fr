@@ -11,6 +11,7 @@ import SafeImg from "../components/SafeImg";
 import { useUI } from "../context/UIContext";
 
 interface Game {
+  id: string;
   title: string;
   author: string;
   version: string;
@@ -18,7 +19,6 @@ interface Game {
   titleId?: string;
   icon?: string;
   screenshots?: { description: string; url: string }[];
-  fileName?: string;
 }
 
 type SortKey = "title" | "author" | "updated";
@@ -57,13 +57,7 @@ export default function Games() {
       const res = await fetch(`${API_URL}/api/games`);
       if (!res.ok) throw new Error("Erreur serveur");
       const data: Game[] = await res.json();
-      const gamesWithFileName = data.map((g) => ({
-        ...g,
-        fileName:
-          g.fileName ||
-          g.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") + ".json",
-      }));
-      setGames(gamesWithFileName);
+      setGames(data);
     } catch (err) {
       console.error("Erreur récupération jeux :", err);
     } finally {
@@ -159,7 +153,7 @@ export default function Games() {
             const hasBoxart = game.screenshots?.some((s) => s.description === "Boxart");
             const hasShot = game.screenshots?.some((s) => s.description !== "Boxart");
             return (
-              <div key={game.fileName} className="rounded-xl border border-border bg-card p-4 hover:shadow-md transition-shadow">
+              <div key={game.id} className="rounded-xl border border-border bg-card p-4 hover:shadow-md transition-shadow">
                 <div className="rounded-lg overflow-hidden bg-muted mb-3 ring-1 ring-border aspect-[4/3]">
                   <SafeImg
                     src={gameBoxart(game)}
@@ -180,7 +174,7 @@ export default function Games() {
                   <span className="text-xs text-muted-foreground">
                     {new Date(game.updated).toLocaleDateString()}
                   </span>
-                  <Link to={`/edit/${game.fileName}`}>
+                  <Link to={`/edit/${game.id}`}>
                     <Button variant="outline" size="sm" className="gap-1.5">
                       <Edit size={14} /> {t("games.edit")}
                     </Button>

@@ -7,18 +7,29 @@ import { requireAdmin } from "../middleware/auth";
 
 const router = express.Router();
 
-const BUILD_SCRIPT =
-  process.env.BUILD_SCRIPT || "/srv/nds-shop/db/scripts/nds-build.sh";
-const BUILD_CWD = process.env.BUILD_CWD || "/srv/nds-shop/db";
-const BUILD_ROMS = process.env.BUILD_ROMS || "/srv/nds-shop/roms";
-const BUILD_LOG = path.join(
+const isWindows = process.platform === "win32";
+
+// Détection de la commande de build
+const BUILD_COMMAND =
+  process.env.BUILD_COMMAND ||
+  (isWindows
+    ? "npm run build"
+    : process.env.BUILD_SCRIPT || "/srv/nds-shop/db/scripts/nds-build.sh");
+
+const BUILD_CWD =
+  process.env.BUILD_CWD ||
+  (isWindows ? path.resolve(process.cwd(), "..") : "/srv/nds-shop/db");
+
+const LOG_FILE = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
   "../../build.log"
 );
 
-// Correction TypeScript : s'assurer que build.log est défini comme string absolue
-// pour éviter les erreurs lors du build.
-const LOG_FILE: string = BUILD_LOG;
+// Assure l'existence du dossier de log
+const logDir = path.dirname(LOG_FILE);
+if (!fs.existsSync(logDir)) {
+  fs.mkdirSync(logDir, { recursive: true });
+}
 
 interface BuildState {
   running: boolean;
@@ -28,16 +39,36 @@ interface BuildState {
   finishedAt: string | null;
 }
 
-let state: BuildState = {
-  running: false,
-  status: "none",
-  log: "",
-  startedAt: null,
-  finishedAt: null,
-};
+function getInitialState(): BuildState {
+  if (fs.existsSync(LOG_FILE)) {
+    try {
+      const content = fs.readFileSync(LOG_FILE, "utf8");
+      const firstLine = content.split("\n")[0] || "";
+      const match = firstLine.match(/\[(.*?)\]\s+(SUCCESS|FAILED)/);
+      if (match) {
+        return {
+          running: false,
+          status: match[2] === "SUCCESS" ? "success" : "failed",
+          log: content,
+          startedAt: null,
+          finishedAt: match[1],
+        };
+      }
+    } catch {}
+  }
+  return {
+    running: false,
+    status: "none",
+    log: "",
+    startedAt: null,
+    finishedAt: null,
+  };
+}
 
-// POST /api/build — lance le build en arrière-plan (non bloquant)
-router.post("/", requireAdmin, (req, res) => {
+let state: BuildState = getInitialState();
+
+// POST /api/build — lance le build en arrière-plan
+router.post("/", requireAdmin, (_req, res) => {
   if (state.running) {
     return res.status(409).json({ error: "Un build est déjà en cours" });
   }
@@ -51,9 +82,12 @@ router.post("/", requireAdmin, (req, res) => {
   };
   fs.writeFileSync(LOG_FILE, "");
 
-  const child = spawn(BUILD_SCRIPT, ["--roms", BUILD_ROMS], {
+  console.log(`🚀 [Build] Lancement de : "${BUILD_COMMAND}" dans "${BUILD_CWD}"`);
+
+  // Exécution avec le shell système
+  const child = spawn(BUILD_COMMAND, {
     cwd: BUILD_CWD,
-    shell: false,
+    shell: true,
   });
 
   const append = (chunk: Buffer) => {
@@ -63,6 +97,7 @@ router.post("/", requireAdmin, (req, res) => {
       fs.appendFileSync(LOG_FILE, text);
     } catch {}
   };
+
   child.stdout.on("data", append);
   child.stderr.on("data", append);
 
@@ -78,7 +113,6 @@ router.post("/", requireAdmin, (req, res) => {
     state.running = false;
     state.status = code === 0 ? "success" : "failed";
     state.finishedAt = new Date().toISOString();
-    // Préfixe [date] SUCCESS/FAILED pour que admin.ts détecte le statut
     fs.writeFileSync(
       LOG_FILE,
       `[${state.finishedAt}] ${code === 0 ? "SUCCESS" : "FAILED"}\n` + state.log
@@ -88,7 +122,7 @@ router.post("/", requireAdmin, (req, res) => {
   res.json({ message: "Build lancé en arrière-plan" });
 });
 
-// GET /api/build/status — log complet + position (temps réel)
+// GET /api/build/status
 router.get("/status", requireAdmin, (_req, res) => {
   res.json({
     running: state.running,

@@ -23,19 +23,26 @@ const statement = {
 
 const ac = createAccessControl(statement);
 
-// super-admin : accès complet (créer, ban, rôles, mot de passe, impersonate, suppression)
 const superAdminRole = ac.newRole({
-  user: ["create", "list", "set-role", "ban", "impersonate", "delete", "set-password", "get", "update"],
+  user: [
+    "create",
+    "list",
+    "set-role",
+    "ban",
+    "impersonate",
+    "delete",
+    "set-password",
+    "get",
+    "update",
+  ],
   session: ["list", "revoke", "delete"],
 });
 
-// admin : gestion des membres sans suppression ni changement de rôle
 const adminRole = ac.newRole({
   user: ["create", "list", "ban", "set-password", "get", "update"],
   session: ["list", "revoke"],
 });
 
-// member : équipe, accès au back-office sans gestion users
 const memberRole = ac.newRole({
   user: [],
   session: [],
@@ -43,13 +50,12 @@ const memberRole = ac.newRole({
 
 export const auth = betterAuth({
   appName: "NDS-Shop Admin",
-  baseURL: process.env.BETTER_AUTH_URL || undefined,
+  baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3000",
   database: prismaAdapter(prisma, { provider: "mysql" }),
   emailAndPassword: {
     enabled: true,
     minPasswordLength: 8,
     maxPasswordLength: 256,
-    // Reprise du hachage bcrypt existant pour migrer l'admin sans reset
     password: {
       hash: async (password) => bcrypt.hash(password, 10),
       verify: async ({ password, hash }) => bcrypt.compare(password, hash),
@@ -69,13 +75,13 @@ export const auth = betterAuth({
     }),
   ],
   session: {
-    expiresIn: 60 * 60 * 24 * 7, // 7 jours
-    updateAge: 60 * 60 * 24, // refresh quotidien
+    expiresIn: 60 * 60 * 24 * 7,
+    updateAge: 60 * 60 * 24,
   },
   rateLimit: {
     enabled: true,
     window: 60,
-    max: 10, // 10 tentatives de connexion / minute
+    max: 10,
   },
   advanced: {
     useSecureCookies: process.env.NODE_ENV === "production",
@@ -84,10 +90,12 @@ export const auth = betterAuth({
     },
   },
   trustedOrigins: [
+    process.env.FRONTEND_URL || "https://upload.db-nds-shop.fr",
     "https://upload.db-nds-shop.fr",
     "http://localhost:5173",
+    "http://localhost:3000",
     "http://localhost:3002",
-  ],
+  ].filter(Boolean) as string[],
 });
 
 export type Session = typeof auth.$Infer.Session;

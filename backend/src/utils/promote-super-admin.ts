@@ -1,17 +1,34 @@
 import prisma from "../lib/prisma";
 
 async function main() {
-  const email = process.argv[2];
-  if (!email) {
-    console.error("Usage: ts-node src/utils/promote-super-admin.ts <email>");
+  const identifier = process.argv[2];
+
+  if (!identifier) {
+    console.error("Usage: ts-node src/utils/promote-super-admin.ts <email|username>");
     process.exit(1);
   }
+
   const res = await prisma.user.updateMany({
-    where: { email },
+    where: {
+      OR: [
+        { email: identifier },
+        { username: identifier },
+      ],
+    },
     data: { role: "super-admin" },
   });
-  console.log(`Promu : ${res.count} user(s) → super-admin (${email})`);
+
+  if (res.count === 0) {
+    console.warn(`⚠️ Aucun utilisateur trouvé pour "${identifier}"`);
+  } else {
+    console.log(`✅ Promu : ${res.count} utilisateur(s) → super-admin (${identifier})`);
+  }
+
   await prisma.$disconnect();
 }
 
-main().catch((e) => { console.error(e); process.exit(1); });
+main().catch(async (e) => {
+  console.error("❌ Erreur lors de la promotion :", e);
+  await prisma.$disconnect();
+  process.exit(1);
+});

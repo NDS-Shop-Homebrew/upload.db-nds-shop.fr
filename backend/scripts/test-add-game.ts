@@ -1,11 +1,9 @@
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import prisma from "../src/lib/prisma";
 
 async function main() {
   const game = await prisma.game.create({
     data: {
-      slug: "mario-vs-donkey-kong-2-march-of-the-minis",
+      id: "mario-vs-donkey-kong-2-march-of-the-minis",
       title: "Mario vs. Donkey Kong 2 - March of the Minis",
       titleId: "A2MP",
       version: "1.0",
@@ -13,16 +11,22 @@ async function main() {
       developer: "Nintendo Software Technology",
       publisher: "Nintendo",
       descriptionMd: "Mario vs. Donkey Kong 2: March of the Minis is a puzzle-platformer game.",
-      systems: ["NDS"],
-      genres: ["Puzzle", "Platformer"],
-      categories: ["game"],
+      systems: JSON.stringify(["NDS"]),
+      genres: JSON.stringify(["Puzzle", "Platformer"]),
+      categories: JSON.stringify(["game"]),
       priority: false,
       stars: 0,
     },
   });
-  console.log("Created:", game.id);
+
+  console.log("✅ Jeu créé avec succès, ID :", game.id);
 }
 
-main().finally(async () => {
-  await prisma.$disconnect();
-});
+main()
+  .catch((e: Error) => {
+    console.error("❌ Erreur :", e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

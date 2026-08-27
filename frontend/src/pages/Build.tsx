@@ -17,7 +17,9 @@ export default function Build() {
       </div>
       <BuildStatus onTriggered={() => {}} />
       <Card>
-        <CardHeader><CardTitle className="text-base">{t("build.about")}</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-base">{t("build.about")}</CardTitle>
+        </CardHeader>
         <CardContent className="text-sm text-muted-foreground space-y-2">
           <p>{t("build.aboutText")}</p>
           <ul className="list-disc list-inside space-y-1">

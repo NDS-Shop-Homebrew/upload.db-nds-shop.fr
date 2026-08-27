@@ -24,8 +24,8 @@ interface Stats {
   noRom: number;
   noIcon: number;
   noBoxart: number;
-  incompleteGames: { title: string; fileName: string; noRom: boolean; noIcon: boolean; noBoxart: boolean }[];
-  recentGames: { title: string; updated: string }[];
+  incompleteGames: { id: string; title: string; noRom: boolean; noIcon: boolean; noBoxart: boolean }[];
+  recentGames: { id?: string; title: string; updated: string }[];
   downloads: { total: number; today: number; nds: number; cia: number; byGame: Record<string, number>; last7: number[]; last30: { date: string; total: number; nds: number; cia: number }[] };
   lastBuild: { at: string | null; ok: boolean | null } | null;
   buildLog: string;
@@ -138,19 +138,19 @@ export default function Dashboard() {
             {stats.incompleteGames.length > 0 && (
               <ul className="mt-3 pt-3 border-t border-amber-200 space-y-1">
                 {stats.incompleteGames.map((g) => (
-                  <li key={g.fileName} className="flex items-center gap-2 text-sm">
+                  <li key={g.id || g.title} className="flex items-center gap-2 text-sm">
                     <span className="font-medium truncate">{g.title}</span>
                     <span className="text-muted-foreground text-xs shrink-0">
                       {g.noRom && <span className="text-red-600">· ROM</span>}
                       {g.noIcon && <span className="text-red-600">· icône</span>}
                       {g.noBoxart && <span className="text-red-600">· boxart</span>}
                     </span>
-                    <a
-                      href={`/edit/${encodeURIComponent(g.fileName)}`}
+                    <Link
+                      to={`/edit/${g.id}`}
                       className="ml-auto text-xs text-primary underline shrink-0"
                     >
                       Corriger
-                    </a>
+                    </Link>
                   </li>
                 ))}
               </ul>

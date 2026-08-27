@@ -1,9 +1,9 @@
 // NDS ROM analysis: header, icon banner, and title extraction.
 //
 // Banner layout (GBATEK, retail DS carts incl. NDSi-Enhanced):
-//   +0x020  200h  Icon bitmap (32x32 px, 4x4 tiles of 8x8, 4bpp, tile-major)
-//   +0x220  20h   16x RGB555 palette (entry 0 transparent)
-//   +0x240  800h  8x UTF-16LE game titles (JP/EN/FR/DE/IT/ES/zh/ko)
+//   +0x020  200h   Icon bitmap (32x32 px, 4x4 tiles of 8x8, 4bpp, tile-major)
+//   +0x220  20h    16x RGB555 palette (entry 0 transparent)
+//   +0x240  800h   8x UTF-16LE game titles (JP/EN/FR/DE/IT/ES/zh/ko)
 //
 // This mirrors tools/nds-to-cia/lib/extractIcon.mjs from db-nds-shop (which
 // is the reference implementation and generates the store icons).
@@ -33,7 +33,7 @@ export interface NdsMetadata {
   region: string;
   language: string;
   titles: Record<string, string>;
-  icon: string; // data URL PNG 48x48 (store convention)
+  icon: string; // data URL PNG 48x48
   iconBytes: number;
   developer?: string;
   publisher?: string;
@@ -92,9 +92,6 @@ function rgb555(v: number): [number, number, number] {
   ];
 }
 
-// Decode the 4bpp icon bitmap (32x32, tile-major) into RGBA.
-// Every palette entry is rendered opaque (entry 0 included), matching the
-// reference extractIcon.mjs behaviour.
 function decodeIcon(rom: Buffer, bl: number): Buffer {
   const px = Buffer.alloc(32 * 32 * 4);
   for (let ty = 0; ty < 4; ty++) {
@@ -118,8 +115,6 @@ function decodeIcon(rom: Buffer, bl: number): Buffer {
   return px;
 }
 
-// Bilinear upscale 32x32 -> 48x48 (48px cap enforced by the 3DS store app),
-// clamped to source bounds (mirrors the reference implementation).
 function upscale(px: Buffer): Buffer {
   const srcW = 32, srcH = 32, outW = 48, outH = 48;
   const out = Buffer.alloc(outW * outH * 4);
@@ -158,26 +153,31 @@ export function analyzeNds(rom: Buffer): NdsMetadata {
   if (rom.length < 0x68) {
     throw new Error("ROM trop petite pour contenir un header NDS");
   }
+  const rawHeaderTitle = rom.subarray(0x00, 0x0c).toString("ascii").replace(/\0.*$/s, "").trim();
   const titleId = rom.subarray(0x0c, 0x10).toString("ascii").trim();
   const makerCode = rom.subarray(0x10, 0x12).toString("ascii").trim();
   const version = rom[0x1e].toString();
   const regionCode = rom[0x1f];
 
   const bl = rom.readUInt32LE(0x68);
-  if (bl + 0xa40 > rom.length) {
-    throw new Error("Offset du banner NDS invalide");
-  }
+  const hasBanner = bl > 0 && bl + 0xa40 <= rom.length;
 
   const titles: Record<string, string> = {};
-  for (let i = 0; i < TITLE_LANGS.length; i++) {
-    const t = decodeUtf16le(rom.subarray(bl + 0x240 + i * 0x100, bl + 0x240 + (i + 1) * 0x100));
-    if (t) titles[TITLE_LANGS[i]] = t;
+  let iconDataUrl = "";
+  let iconBytes = 0;
+
+  if (hasBanner) {
+    for (let i = 0; i < TITLE_LANGS.length; i++) {
+      const t = decodeUtf16le(rom.subarray(bl + 0x240 + i * 0x100, bl + 0x240 + (i + 1) * 0x100));
+      if (t) titles[TITLE_LANGS[i]] = t;
+    }
+    const png = encodePng(48, 48, upscale(decodeIcon(rom, bl)));
+    iconDataUrl = `data:image/png;base64,${png.toString("base64")}`;
+    iconBytes = png.length;
   }
 
-  const language = titles.en ? "en" : "fr" in titles ? "fr" : Object.keys(titles)[0] || "";
-  const title = titles[language] || titles.en || Object.values(titles)[0] || "";
-
-  const png = encodePng(48, 48, upscale(decodeIcon(rom, bl)));
+  const language = titles.fr ? "fr" : titles.en ? "en" : Object.keys(titles)[0] || "en";
+  const title = titles[language] || titles.en || Object.values(titles)[0] || rawHeaderTitle || "Unknown";
 
   return {
     title,
@@ -187,7 +187,7 @@ export function analyzeNds(rom: Buffer): NdsMetadata {
     region: REGIONS[regionCode] || "",
     language,
     titles,
-    icon: `data:image/png;base64,${png.toString("base64")}`,
-    iconBytes: png.length,
+    icon: iconDataUrl,
+    iconBytes,
   };
 }

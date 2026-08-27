@@ -37,7 +37,7 @@ export default function App() {
           <Route path="/team" element={<AdminRoute><Team /></AdminRoute>} />
           <Route path="/build" element={<Build />} />
           <Route path="/settings" element={<Settings />} />
-          <Route path="/edit/:fileName" element={<EditGameForm />} />
+          <Route path="/edit/:id" element={<EditGameForm />} />
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>

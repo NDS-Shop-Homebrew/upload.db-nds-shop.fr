@@ -1,34 +1,70 @@
-// Rattrapage one-shot : crée les entrées ndsdb manquantes pour tous les jeux existants.
-// Usage sur le serveur : cd backend && npx ts-node scripts/backfill-ndsdb.ts
-// Requiert GAMES_PATH et NDSDB_PATH dans .env (ou en variables d'environnement).
 import "dotenv/config";
 import fs from "fs";
 import path from "path";
-import { upsertNdsdbEntry } from "../src/lib/ndsdb.ts";
+import prisma from "../src/lib/prisma";
+import { upsertNdsdbEntry } from "../src/lib/ndsdb";
 
 async function main() {
-  const GAMES_PATH = process.env.GAMES_PATH;
-  if (!GAMES_PATH) {
-    console.error("GAMES_PATH manquant");
+  const NDSDB_PATH = process.env.NDSDB_PATH;
+  if (!NDSDB_PATH) {
+    console.error("❌ NDSDB_PATH manquant dans .env");
     process.exit(1);
   }
-  const files = fs.readdirSync(GAMES_PATH).filter((f) => f.endsWith(".json"));
-  console.log(`${files.length} jeu(x) à traiter`);
+
+  console.log(`📦 Synchronisation NDSDB vers : ${NDSDB_PATH}`);
+
+  const games = await prisma.game.findMany({
+    include: {
+      downloads: true,
+      screenshots: true,
+    },
+    orderBy: { title: "asc" },
+  });
+
   let ok = 0;
-  for (const f of files) {
+  let skipped = 0;
+
+  for (const game of games) {
+    if (!game.titleId) {
+      skipped++;
+      continue;
+    }
+
     try {
-      const g = JSON.parse(fs.readFileSync(path.join(GAMES_PATH, f), "utf8"));
-      await upsertNdsdbEntry(g);
+      await upsertNdsdbEntry({
+        title: game.title,
+        titleId: game.titleId,
+        developer: game.developer,
+        publisher: game.publisher,
+        genres: game.genres,
+        description: game.descriptionMd,
+      });
       ok++;
-      console.log("✓", g.title || f);
+      console.log(`  ✓ [${game.titleId}] ${game.title}`);
     } catch (err: any) {
-      console.error("✗", f, err.message);
+      console.error(`  ✗ [${game.titleId}] ${game.title} - ${err.message}`);
     }
   }
-  console.log(`Terminé : ${ok}/${files.length}`);
+
+  const GAMES_PATH = process.env.GAMES_PATH;
+  if (GAMES_PATH && fs.existsSync(GAMES_PATH)) {
+    const files = fs.readdirSync(GAMES_PATH).filter((f: string) => f.endsWith(".json"));
+    for (const f of files) {
+      try {
+        const g = JSON.parse(fs.readFileSync(path.join(GAMES_PATH, f), "utf8"));
+        if (g.titleId) {
+          await upsertNdsdbEntry(g);
+        }
+      } catch {}
+    }
+  }
+
+  console.log(`\n✨ Terminé : ${ok} synchronisés (${skipped} sans titleId).`);
+  await prisma.$disconnect();
 }
 
-main().catch((e) => {
-  console.error(e);
+main().catch(async (e) => {
+  console.error("❌ Erreur fatale :", e);
+  await prisma.$disconnect();
   process.exit(1);
 });

@@ -31,10 +31,10 @@ interface Game {
   author: string;
   developer?: string;
   publisher?: string;
-  genres?: string[];
+  genres?: string[] | string;
   description?: string;
-  categories: string[];
-  systems: string[];
+  categories: string[] | string;
+  systems: string[] | string;
   downloads: Downloads;
   screenshots: Screenshot[];
   icon: string;
@@ -60,6 +60,24 @@ const formatDate = () => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
     d.getHours(),
   )}:${pad(d.getMinutes())}:${pad(d.getSeconds())}+02:00`;
+};
+
+// Helper pour normaliser les valeurs en tableau (supporte array, JSON string et CSV)
+const ensureArray = (val: unknown): string[] => {
+  if (!val) return [];
+  if (Array.isArray(val)) return val;
+  if (typeof val === "string") {
+    try {
+      const parsed = JSON.parse(val);
+      if (Array.isArray(parsed)) return parsed;
+    } catch {
+      return val
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+  }
+  return [];
 };
 
 export default function EditGameForm() {
@@ -113,8 +131,13 @@ export default function EditGameForm() {
         author: prev.author || meta.developer || "",
         developer: meta.developer || prev.developer || "",
         publisher: meta.publisher || prev.publisher || "",
-        genres: meta.genres?.length ? meta.genres : prev.genres || [],
-        description: prev.description || meta.description || meta.description_en || meta.description_fr || "",
+        genres: meta.genres?.length ? meta.genres : ensureArray(prev.genres),
+        description:
+          prev.description ||
+          meta.description ||
+          meta.description_en ||
+          meta.description_fr ||
+          "",
         icon: prev.icon || meta.icon || "",
       }));
       if (meta.titleId)
@@ -130,35 +153,51 @@ export default function EditGameForm() {
   };
 
   useEffect(() => {
-    if (isNew) return;
-    const fetchGame = async () => {
-      setLoading(true);
-      try {
-        const res = await fetch(`${API_URL}/api/games`);
-        if (!res.ok) throw new Error(t("edit.loadDataFail"));
-        const games: Game[] = await res.json();
-        const g = games.find(
-          (game) =>
-            `${game.title
-              .toLowerCase()
-              .replace(/[^a-z0-9]+/g, "-")
-              .replace(/^-+|-+$/g, "")}.json` === fileName,
+  if (isNew) return;
+  const fetchGame = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/games`);
+      if (!res.ok) throw new Error(t("edit.loadDataFail"));
+      const games: any[] = await res.json();
+
+      // Nettoie la cible (enlève .json et les tirets pour comparer)
+      const targetSlug = (fileName || "").replace(/\.json$/i, "").replace(/[^a-z0-9]/gi, "").toLowerCase();
+
+      const g = games.find((game) => {
+        // 1. Match par ID direct si existant
+        if (game.id && (game.id === fileName || `${game.id}.json` === fileName)) return true;
+        
+        // 2. Match par titre normalisé (insensible aux apostrophes/tirets)
+        const gameClean = game.title.replace(/[^a-z0-9]/gi, "").toLowerCase();
+        return gameClean === targetSlug;
+      });
+
+      if (g) {
+        setGame({
+          ...g,
+          genres: ensureArray(g.genres),
+          categories: ensureArray(g.categories),
+          systems: ensureArray(g.systems),
+          downloads: g.downloads || {},
+          screenshots: g.screenshots || [],
+        });
+        const ndsName = Object.keys(g.downloads || {}).find((k) =>
+          /\.nds$/i.test(k),
         );
-        if (g) {
-          setGame(g);
-          // Déduit le forwarder .cia depuis la première ROM .nds
-          const ndsName = Object.keys(g.downloads || {}).find((k) => /\.nds$/i.test(k));
-          if (ndsName) setForwarderFile(ndsName.replace(/\.nds$/i, ".cia"));
-        }
-      } catch (err) {
-        console.error(err);
+        if (ndsName) setForwarderFile(ndsName.replace(/\.nds$/i, ".cia"));
+      } else {
         setMessage({ text: t("edit.loadFail"), type: "error" });
-      } finally {
-        setLoading(false);
       }
-    };
-    fetchGame();
-  }, [fileName, isNew]);
+    } catch (err) {
+      console.error(err);
+      setMessage({ text: t("edit.loadFail"), type: "error" });
+    } finally {
+      setLoading(false);
+    }
+  };
+  fetchGame();
+}, [fileName, isNew]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -178,7 +217,7 @@ export default function EditGameForm() {
 
   const toggleArrayValue = (field: "categories" | "systems", value: string) => {
     setGame((prev) => {
-      const arr = prev[field];
+      const arr = ensureArray(prev[field]);
       return {
         ...prev,
         [field]: arr.includes(value)
@@ -240,7 +279,6 @@ export default function EditGameForm() {
             [file.name]: { url: data.url },
           },
         }));
-        // Le forwarder .cia a le même nom que le .nds (généré par le build)
         const ciaName = file.name.replace(/\.nds$/i, ".cia");
         setForwarderFile(ciaName);
       } else if (type === "cia") {
@@ -279,13 +317,21 @@ export default function EditGameForm() {
       : `${API_URL}/api/games/${fileName}`;
 
     try {
+      const payload = {
+        ...game,
+        genres: ensureArray(game.genres),
+        categories: ensureArray(game.categories),
+        systems: ensureArray(game.systems),
+        updated: formatDate(),
+      };
+
       const res = await fetch(url, {
         method,
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ ...game, updated: formatDate() }),
+        body: JSON.stringify(payload),
       });
 
       if (res.status === 409) {
@@ -344,6 +390,10 @@ export default function EditGameForm() {
     );
   }
 
+  const currentCategories = ensureArray(game.categories);
+  const currentSystems = ensureArray(game.systems);
+  const currentGenres = ensureArray(game.genres);
+
   return (
     <div className="p-4 md:p-8 max-w-4xl mx-auto">
       <Button
@@ -359,9 +409,7 @@ export default function EditGameForm() {
           <CardTitle className="text-2xl">
             {isNew ? t("edit.new") : `${t("edit.edit")} ${game.title}`}
           </CardTitle>
-          <CardDescription>
-            {t("edit.description")}
-          </CardDescription>
+          <CardDescription>{t("edit.description")}</CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-8">
@@ -412,11 +460,13 @@ export default function EditGameForm() {
               <Input
                 id="genres"
                 name="genres"
-                value={game.genres?.join(", ") || ""}
+                value={currentGenres.join(", ")}
                 onChange={handleGenresChange}
                 placeholder="Platform, Adventure"
               />
-              <p className="text-xs text-muted-foreground">{t("edit.genresHint")}</p>
+              <p className="text-xs text-muted-foreground">
+                {t("edit.genresHint")}
+              </p>
             </div>
           </div>
 
@@ -426,11 +476,15 @@ export default function EditGameForm() {
               id="description"
               name="description"
               value={game.description || ""}
-              onChange={(e) => setGame((prev) => ({ ...prev, description: e.target.value }))}
+              onChange={(e) =>
+                setGame((prev) => ({ ...prev, description: e.target.value }))
+              }
               placeholder="Résumé du jeu..."
               rows={4}
             />
-            <p className="text-xs text-muted-foreground">{t("edit.descHint")}</p>
+            <p className="text-xs text-muted-foreground">
+              {t("edit.descHint")}
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -468,7 +522,7 @@ export default function EditGameForm() {
                 >
                   <Checkbox
                     id={`cat-${c}`}
-                    checked={game.categories.includes(c)}
+                    checked={currentCategories.includes(c)}
                     onCheckedChange={() => toggleArrayValue("categories", c)}
                   />
                   <Label htmlFor={`cat-${c}`} className="cursor-pointer">
@@ -489,7 +543,7 @@ export default function EditGameForm() {
                 >
                   <Checkbox
                     id={`sys-${s}`}
-                    checked={game.systems.includes(s)}
+                    checked={currentSystems.includes(s)}
                     onCheckedChange={() => toggleArrayValue("systems", s)}
                   />
                   <Label htmlFor={`sys-${s}`} className="cursor-pointer">
@@ -543,7 +597,8 @@ export default function EditGameForm() {
                 <>
                   <div className="p-4 border rounded-md bg-muted/50 space-y-2">
                     <p className="text-base font-semibold flex items-center gap-2">
-                      <Sparkles size={16} className="text-primary" /> {t("edit.iconAuto")}
+                      <Sparkles size={16} className="text-primary" />{" "}
+                      {t("edit.iconAuto")}
                     </p>
                     <p className="text-sm text-muted-foreground">
                       {t("edit.iconAutoText")}
@@ -551,7 +606,8 @@ export default function EditGameForm() {
                   </div>
                   <div className="p-4 border rounded-md bg-muted/50 space-y-2">
                     <p className="text-base font-semibold flex items-center gap-2">
-                      <Sparkles size={16} className="text-primary" /> {t("edit.shotsAuto")}
+                      <Sparkles size={16} className="text-primary" />{" "}
+                      {t("edit.shotsAuto")}
                     </p>
                     <p className="text-sm text-muted-foreground">
                       {t("edit.shotsAutoText")}
@@ -559,7 +615,8 @@ export default function EditGameForm() {
                   </div>
                   <div className="p-4 border rounded-md bg-muted/50 space-y-2">
                     <p className="text-base font-semibold flex items-center gap-2">
-                      <Sparkles size={16} className="text-primary" /> {t("edit.fwdAuto")}
+                      <Sparkles size={16} className="text-primary" />{" "}
+                      {t("edit.fwdAuto")}
                     </p>
                     <p className="text-sm text-muted-foreground">
                       {t("edit.fwdAutoText")}
@@ -601,8 +658,15 @@ export default function EditGameForm() {
 
           <div className="pt-6 border-t flex flex-col items-center gap-4">
             {message && (
-              <Alert variant={message.type === "success" ? "default" : "destructive"} className="w-full text-center">
-                <AlertDescription className="font-medium">{message.text}</AlertDescription>
+              <Alert
+                variant={
+                  message.type === "success" ? "default" : "destructive"
+                }
+                className="w-full text-center"
+              >
+                <AlertDescription className="font-medium">
+                  {message.text}
+                </AlertDescription>
               </Alert>
             )}
 
