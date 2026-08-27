@@ -28,6 +28,8 @@ const TITLE_LANGS = ["jp", "en", "fr", "de", "it", "es", "zh", "ko"] as const;
 export interface NdsMetadata {
   title: string;
   titleId: string;
+  serial: string; // Ex: NTR-ADMP-EUR ou TWL-VTEE-USA
+  isDsi: boolean;
   makerCode: string;
   version: string;
   region: string;
@@ -38,6 +40,37 @@ export interface NdsMetadata {
   developer?: string;
   publisher?: string;
   genres?: string[];
+}
+
+export function formatNdsSerial(titleId: string, isDsi = false): string {
+  if (!titleId || titleId.length < 4) return titleId || "";
+
+  const code = titleId.toUpperCase().trim();
+
+  // Préfixe : TWL si DSi/DSi-Enhanced (lettres V, K, H, T, etc. ou flag), sinon NTR
+  const prefix = isDsi || /^([VKHTU])/i.test(code) ? "TWL" : "NTR";
+
+  // Code région selon le 4e caractère du gamecode
+  const lastChar = code.charAt(3);
+  const regionMap: Record<string, string> = {
+    E: "USA",
+    P: "EUR",
+    F: "FRA",
+    J: "JPN",
+    D: "NOE",
+    I: "ITA",
+    S: "ESP",
+    K: "KOR",
+    C: "CHN",
+    U: "AUS",
+    X: "EUU",
+    Y: "EUU",
+    Z: "EUU",
+    A: "ALL",
+  };
+
+  const region = regionMap[lastChar] || "EUR";
+  return `${prefix}-${code}-${region}`;
 }
 
 let crcTable: Int32Array | null = null;
@@ -156,6 +189,11 @@ export function analyzeNds(rom: Buffer): NdsMetadata {
   const rawHeaderTitle = rom.subarray(0x00, 0x0c).toString("ascii").replace(/\0.*$/s, "").trim();
   const titleId = rom.subarray(0x0c, 0x10).toString("ascii").trim();
   const makerCode = rom.subarray(0x10, 0x12).toString("ascii").trim();
+  
+  // Offset 0x012: Unit Code (0x00 = NDS, 0x02 = NDS+DSi / DSi Enhanced, 0x03 = DSi Exclusive)
+  const unitCode = rom[0x12];
+  const isDsi = unitCode === 0x02 || unitCode === 0x03 || /^([VKHTU])/i.test(titleId);
+
   const version = rom[0x1e].toString();
   const regionCode = rom[0x1f];
 
@@ -182,6 +220,8 @@ export function analyzeNds(rom: Buffer): NdsMetadata {
   return {
     title,
     titleId,
+    serial: formatNdsSerial(titleId, isDsi),
+    isDsi,
     makerCode,
     version,
     region: REGIONS[regionCode] || "",

@@ -20,12 +20,16 @@ import { useUI } from "../context/UIContext";
 
 interface Screenshot {
   url: string;
-  description: string;
+  description?: string;
+  order?: number;
 }
+
 interface Downloads {
-  [name: string]: { url: string };
+  [name: string]: { url: string; size?: number | null };
 }
+
 interface Game {
+  id?: string;
   title: string;
   titleId?: string;
   author: string;
@@ -33,6 +37,7 @@ interface Game {
   publisher?: string;
   genres?: string[] | string;
   description?: string;
+  descriptionMd?: string;
   categories: string[] | string;
   systems: string[] | string;
   downloads: Downloads;
@@ -40,6 +45,28 @@ interface Game {
   icon: string;
   version: string;
   updated: string;
+}
+
+interface GameApiResponse {
+  id?: string;
+  title?: string;
+  titleId?: string;
+  author?: string;
+  developer?: string;
+  publisher?: string;
+  genres?: string[] | string;
+  categories?: string[] | string;
+  systems?: string[] | string;
+  description?: string;
+  descriptionMd?: string;
+  downloads?: Downloads;
+  screenshots?: Screenshot[];
+  iconUrl?: string;
+  icon?: string;
+  boxartUrl?: string;
+  boxart?: string;
+  version?: string;
+  updated?: string;
 }
 
 const availableCategories = ["game", "homebrew", "emulator"];
@@ -62,7 +89,6 @@ const formatDate = () => {
   )}:${pad(d.getMinutes())}:${pad(d.getSeconds())}+02:00`;
 };
 
-// Helper pour normaliser les valeurs en tableau (supporte array, JSON string et CSV)
 const ensureArray = (val: unknown): string[] => {
   if (!val) return [];
   if (Array.isArray(val)) return val;
@@ -82,9 +108,11 @@ const ensureArray = (val: unknown): string[] => {
 
 export default function EditGameForm() {
   const { t } = useUI();
-  const { fileName } = useParams<{ fileName: string }>();
+  const params = useParams<{ fileName?: string; id?: string; slug?: string }>();
+  const identifier = params.fileName || params.id || params.slug || "";
   const navigate = useNavigate();
-  const isNew = !fileName || fileName === "new";
+
+  const isNew = !identifier || identifier === "new";
 
   const [game, setGame] = useState<Game>({
     title: "",
@@ -145,7 +173,7 @@ export default function EditGameForm() {
           text: `ROM analysée: ${title} (${meta.titleId})${meta.developer ? " — " + meta.developer : ""}`,
           type: "success",
         });
-    } catch (err) {
+    } catch {
       setMessage({ text: t("edit.analyzeFail"), type: "error" });
     } finally {
       setAnalyzing(false);
@@ -153,51 +181,82 @@ export default function EditGameForm() {
   };
 
   useEffect(() => {
-  if (isNew) return;
-  const fetchGame = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`${API_URL}/api/games`);
-      if (!res.ok) throw new Error(t("edit.loadDataFail"));
-      const games: any[] = await res.json();
+    if (isNew) return;
 
-      // Nettoie la cible (enlève .json et les tirets pour comparer)
-      const targetSlug = (fileName || "").replace(/\.json$/i, "").replace(/[^a-z0-9]/gi, "").toLowerCase();
-
-      const g = games.find((game) => {
-        // 1. Match par ID direct si existant
-        if (game.id && (game.id === fileName || `${game.id}.json` === fileName)) return true;
-        
-        // 2. Match par titre normalisé (insensible aux apostrophes/tirets)
-        const gameClean = game.title.replace(/[^a-z0-9]/gi, "").toLowerCase();
-        return gameClean === targetSlug;
-      });
-
-      if (g) {
-        setGame({
-          ...g,
-          genres: ensureArray(g.genres),
-          categories: ensureArray(g.categories),
-          systems: ensureArray(g.systems),
-          downloads: g.downloads || {},
-          screenshots: g.screenshots || [],
-        });
-        const ndsName = Object.keys(g.downloads || {}).find((k) =>
-          /\.nds$/i.test(k),
+    const fetchGame = async () => {
+      setLoading(true);
+      try {
+        let g: GameApiResponse | null = null;
+        const resSingle = await fetch(
+          `${API_URL}/api/games/${encodeURIComponent(identifier)}`,
+          {
+            credentials: "include",
+          },
         );
-        if (ndsName) setForwarderFile(ndsName.replace(/\.nds$/i, ".cia"));
-      } else {
+
+        if (resSingle.ok) {
+          g = (await resSingle.json()) as GameApiResponse;
+        } else {
+          const resAll = await fetch(`${API_URL}/api/games`, {
+            credentials: "include",
+          });
+          if (!resAll.ok) throw new Error(t("edit.loadDataFail"));
+          const games: GameApiResponse[] = await resAll.json();
+
+          const targetSlug = identifier
+            .replace(/\.json$/i, "")
+            .replace(/[^a-z0-9]/gi, "")
+            .toLowerCase();
+          g =
+            games.find((item) => {
+              if (
+                item.id &&
+                (item.id === identifier || `${item.id}.json` === identifier)
+              )
+                return true;
+              const itemClean = (item.title || "")
+                .replace(/[^a-z0-9]/gi, "")
+                .toLowerCase();
+              return itemClean === targetSlug;
+            }) || null;
+        }
+
+        if (g) {
+          setGame({
+            id: g.id,
+            title: g.title || "",
+            titleId: g.titleId || "",
+            author: g.author || "",
+            developer: g.developer || "",
+            publisher: g.publisher || "",
+            genres: ensureArray(g.genres),
+            categories: ensureArray(g.categories),
+            systems: ensureArray(g.systems),
+            description: g.descriptionMd || g.description || "",
+            downloads: g.downloads || {},
+            screenshots: g.screenshots || [],
+            icon: g.iconUrl || g.icon || "",
+            version: g.version || "(Europe)",
+            updated: g.updated || formatDate(),
+          });
+
+          const ndsName = Object.keys(g.downloads || {}).find((k) =>
+            /\.nds$/i.test(k),
+          );
+          if (ndsName) setForwarderFile(ndsName.replace(/\.nds$/i, ".cia"));
+        } else {
+          setMessage({ text: t("edit.loadFail"), type: "error" });
+        }
+      } catch (err) {
+        console.error(err);
         setMessage({ text: t("edit.loadFail"), type: "error" });
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      console.error(err);
-      setMessage({ text: t("edit.loadFail"), type: "error" });
-    } finally {
-      setLoading(false);
-    }
-  };
-  fetchGame();
-}, [fileName, isNew]);
+    };
+
+    fetchGame();
+  }, [identifier, isNew, t]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -240,7 +299,10 @@ export default function EditGameForm() {
       return await res.json();
     } catch (err) {
       console.error(err);
-      setMessage({ text: `${t("edit.uploadFail")} ${endpoint}`, type: "error" });
+      setMessage({
+        text: `${t("edit.uploadFail")} ${endpoint}`,
+        type: "error",
+      });
       return null;
     }
   };
@@ -289,16 +351,16 @@ export default function EditGameForm() {
     setUploading(false);
   };
 
-  const removeFile = (type: "screenshot" | "nds", identifier: string) => {
+  const removeFile = (type: "screenshot" | "nds", identifierKey: string) => {
     if (type === "screenshot") {
       setGame((prev) => ({
         ...prev,
-        screenshots: prev.screenshots.filter((s) => s.url !== identifier),
+        screenshots: prev.screenshots.filter((s) => s.url !== identifierKey),
       }));
     } else if (type === "nds") {
       setGame((prev) => {
         const newDownloads = { ...prev.downloads };
-        delete newDownloads[identifier];
+        delete newDownloads[identifierKey];
         return { ...prev, downloads: newDownloads };
       });
     }
@@ -311,10 +373,11 @@ export default function EditGameForm() {
     }
 
     setMessage(null);
+    const targetId = game.id || identifier;
     const method = isNew ? "POST" : "PUT";
     const url = isNew
       ? `${API_URL}/api/games`
-      : `${API_URL}/api/games/${fileName}`;
+      : `${API_URL}/api/games/${encodeURIComponent(targetId)}`;
 
     try {
       const payload = {
@@ -322,6 +385,7 @@ export default function EditGameForm() {
         genres: ensureArray(game.genres),
         categories: ensureArray(game.categories),
         systems: ensureArray(game.systems),
+        descriptionMd: game.description,
         updated: formatDate(),
       };
 
@@ -336,17 +400,23 @@ export default function EditGameForm() {
 
       if (res.status === 409) {
         const data = await res.json();
+        const conflictId = data.game?.id || data.fileName || targetId;
         setMessage({
-          text: `${t("edit.exists")} (${data.fileName}).`,
+          text: `${t("edit.exists")} (${conflictId}).`,
           type: "error",
         });
-        if (data.fileName)
+        if (conflictId) {
           setTimeout(
-            () => navigate(`/edit/${data.fileName}`, { replace: true }),
-            2000,
+            () =>
+              navigate(`/edit/${encodeURIComponent(conflictId)}`, {
+                replace: true,
+              }),
+            1500,
           );
+        }
         return;
       }
+
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
 
@@ -355,10 +425,12 @@ export default function EditGameForm() {
         type: "success",
       });
 
-      if (isNew && data.fileName) {
+      const nextId = data.game?.id || data.fileName;
+      if (isNew && nextId) {
         setTimeout(
-          () => navigate(`/edit/${data.fileName}`, { replace: true }),
-          1500,
+          () =>
+            navigate(`/edit/${encodeURIComponent(nextId)}`, { replace: true }),
+          1200,
         );
       }
     } catch (err) {
@@ -659,9 +731,7 @@ export default function EditGameForm() {
           <div className="pt-6 border-t flex flex-col items-center gap-4">
             {message && (
               <Alert
-                variant={
-                  message.type === "success" ? "default" : "destructive"
-                }
+                variant={message.type === "success" ? "default" : "destructive"}
                 className="w-full text-center"
               >
                 <AlertDescription className="font-medium">
@@ -674,7 +744,7 @@ export default function EditGameForm() {
               onClick={saveGame}
               disabled={uploading || !game.title}
               size="lg"
-              className="w-full md:w-auto min-w-[200px] gap-2"
+              className="w-full md:w-auto min-w-50 gap-2"
             >
               <Save size={18} />
               {isNew ? t("edit.create") : t("edit.update")}
