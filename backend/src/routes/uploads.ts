@@ -1,7 +1,7 @@
 import express from "express";
 import multer from "multer";
 import path from "path";
-import { requireAdmin } from "../middleware/auth.ts";
+import { requireAdmin } from "../middleware/auth";
 
 const router = express.Router();
 

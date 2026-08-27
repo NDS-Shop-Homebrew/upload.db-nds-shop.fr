@@ -2,7 +2,7 @@
 // Usage: npx ts-node src/utils/restore-admin.ts <nouveauMotDePasse>
 // Crée (ou répare) l'utilisateur admin + son compte credential avec un hash bcrypt,
 // en suivant exactement les conventions de Better Auth (cf. lib/auth.ts).
-import prisma from "../lib/prisma.ts";
+import prisma from "../lib/prisma";
 import { hash } from "bcrypt";
 import { randomBytes } from "crypto";
 

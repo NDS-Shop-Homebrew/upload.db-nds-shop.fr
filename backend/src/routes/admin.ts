@@ -1,8 +1,8 @@
 import express from "express";
 import fs from "fs";
 import path from "path";
-import prisma from "../lib/prisma.ts";
-import { requireAdmin, requireAuth } from "../middleware/auth.ts";
+import prisma from "../lib/prisma";
+import { requireAdmin, requireAuth } from "../middleware/auth";
 
 const router = express.Router();
 

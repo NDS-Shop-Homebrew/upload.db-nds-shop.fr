@@ -3,7 +3,7 @@ import { spawn } from "child_process";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { requireAdmin } from "../middleware/auth.ts";
+import { requireAdmin } from "../middleware/auth";
 
 const router = express.Router();
 

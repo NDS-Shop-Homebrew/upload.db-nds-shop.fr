@@ -1,7 +1,7 @@
 import express from "express";
 import multer from "multer";
-import { analyzeNds } from "../lib/nds.ts";
-import { requireAdmin } from "../middleware/auth.ts";
+import { analyzeNds } from "../lib/nds";
+import { requireAdmin } from "../middleware/auth";
 
 const router = express.Router();
 

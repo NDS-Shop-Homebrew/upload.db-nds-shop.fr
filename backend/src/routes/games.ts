@@ -1,8 +1,8 @@
 import express from "express";
 import { execFileSync } from "child_process";
-import { requireAdmin } from "../middleware/auth.ts";
-import prisma from "../lib/prisma.ts";
-import { upsertNdsdbEntry } from "../lib/ndsdb.ts";
+import { requireAdmin } from "../middleware/auth";
+import prisma from "../lib/prisma";
+import { upsertNdsdbEntry } from "../lib/ndsdb";
 
 const router = express.Router();
 
