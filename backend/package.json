@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "ts-node src/server.ts"
+    "dev": "ts-node src/server.ts",
+    "build": "tsc",
+    "start": "node dist/src/server.js"
   },
   "dependencies": {
     "@nds-shop/prisma": "github:NDS-Shop-Homebrew/prisma",
