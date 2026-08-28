@@ -1,7 +1,7 @@
 {
-  "name": "upload.db-nds-shop.fr",
+  "name": "upload.db-nds-shop-frontend",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",

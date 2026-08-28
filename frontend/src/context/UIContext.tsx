@@ -1,40 +1,643 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
 
 type Lang = "fr" | "en";
 
+const DICT: Record<string, { fr: string; en: string }> = {
+  // ---------------------------------------------------------------------
+  // Navigation
+  // ---------------------------------------------------------------------
+  "nav.dashboard": { fr: "Dashboard", en: "Dashboard" },
+  "nav.games": { fr: "Jeux", en: "Games" },
+  "nav.users": { fr: "Utilisateurs", en: "Users" },
+  "nav.stats": { fr: "Statistiques", en: "Statistics" },
+  "nav.settings": { fr: "Réglages", en: "Settings" },
+  "nav.logout": { fr: "Déconnexion", en: "Logout" },
+  "nav.team": { fr: "Équipe", en: "Team" },
+  "nav.build": { fr: "Build", en: "Build" },
+  "nav.backoffice": { fr: "Back-office", en: "Back-office" },
+  "nav.menu": { fr: "Menu", en: "Menu" },
+  // Ajoutées lors de la migration précédente — vérifier si ces pages existent réellement dans l'app
+  "nav.forwarders": { fr: "Forwarders", en: "Forwarders" },
+  "nav.screenshots": { fr: "Screenshots", en: "Screenshots" },
+  "nav.requests": { fr: "Demandes", en: "Requests" },
+  "nav.blacklist": { fr: "Blacklist", en: "Blacklist" },
+
+  "app.title": { fr: "NDS-Shop Upload", en: "NDS-Shop Upload" },
+
+  // ---------------------------------------------------------------------
+  // Login
+  // ---------------------------------------------------------------------
+  "login.title": { fr: "Connexion", en: "Sign in" },
+  "login.subtitle": {
+    fr: "Connectez-vous pour accéder au back-office.",
+    en: "Sign in to access the back-office.",
+  },
+  "login.tagline": {
+    fr: "Espace d'administration du site NDS-Shop.",
+    en: "NDS-Shop website administration area.",
+  },
+  "login.adminTitle": { fr: "Administration", en: "Administration" },
+  "login.username": { fr: "Identifiant", en: "Username" },
+  "login.usernamePh": { fr: "Votre identifiant", en: "Your username" },
+  "login.password": { fr: "Mot de passe", en: "Password" },
+  "login.passwordPh": { fr: "••••••••", en: "••••••••" },
+  "login.error": { fr: "Identifiants incorrects", en: "Invalid credentials" },
+  "login.serverError": {
+    fr: "Erreur de connexion au serveur",
+    en: "Connection error",
+  },
+  "login.loading": { fr: "Connexion en cours...", en: "Signing in..." },
+  // Les deux variantes du libellé bouton sont gardées : selon ce qu'utilise chaque composant
+  "login.button": { fr: "Se connecter", en: "Sign in" },
+  "login.submit": { fr: "Connexion", en: "Sign in" },
+  "login.reserved": {
+    fr: "Accès réservé à l'équipe NDS-Shop",
+    en: "Restricted to NDS-Shop team",
+  },
+  "login.remember": { fr: "Se souvenir de moi", en: "Remember me" },
+  "login.showPassword": { fr: "Afficher le mot de passe", en: "Show password" },
+  "login.hidePassword": { fr: "Masquer le mot de passe", en: "Hide password" },
+
+  // ---------------------------------------------------------------------
+  // Requests (demandes de jeux)
+  // ---------------------------------------------------------------------
+  "requests.title": { fr: "Demandes de jeux", en: "Game requests" },
+  "requests.subtitle": {
+    fr: "Demandes en attente depuis le site public.",
+    en: "Pending requests from the public site.",
+  },
+  "requests.refresh": { fr: "Rafraîchir", en: "Refresh" },
+  "requests.systemsCol": { fr: "Systèmes", en: "Systems" },
+  "requests.requesterCol": { fr: "Demandeur", en: "Requester" },
+  "requests.dateCol": { fr: "Date", en: "Date" },
+  "requests.votesCol": { fr: "Votes", en: "Votes" },
+  "requests.delete": { fr: "Supprimer", en: "Delete" },
+  "requests.confirmDelete": {
+    fr: "Supprimer cette demande ?",
+    en: "Delete this request?",
+  },
+  "requests.deleted": { fr: "Demande supprimée", en: "Request deleted" },
+  "requests.empty": {
+    fr: "Aucune demande en attente.",
+    en: "No pending requests.",
+  },
+  "requests.anonymous": { fr: "Anonyme", en: "Anonymous" },
+  // Ajoutées lors de la migration précédente — vérifier si ce workflow approve/reject existe réellement
+  "requests.status": { fr: "Statut", en: "Status" },
+  "requests.requestedBy": { fr: "Demandé par", en: "Requested by" },
+  "requests.date": { fr: "Date", en: "Date" },
+  "requests.actions": { fr: "Actions", en: "Actions" },
+  "requests.approve": { fr: "Approuver", en: "Approve" },
+  "requests.reject": { fr: "Rejeter", en: "Reject" },
+  "requests.pending": { fr: "En attente", en: "Pending" },
+  "requests.approved": { fr: "Approuvé", en: "Approved" },
+  "requests.rejected": { fr: "Rejeté", en: "Rejected" },
+
+  // ---------------------------------------------------------------------
+  // Dashboard
+  // ---------------------------------------------------------------------
+  "dashboard.title": { fr: "Dashboard", en: "Dashboard" },
+  "dashboard.greeting": { fr: "Bonjour", en: "Hello" },
+  "dashboard.role": { fr: "rôle", en: "role" },
+  "dashboard.refresh": { fr: "Rafraîchir", en: "Refresh" },
+  "dashboard.lastBuild": { fr: "Dernier build", en: "Last build" },
+  "dashboard.noBuild": { fr: "Aucun build effectué", en: "No build yet" },
+  "dashboard.success": { fr: "Succès", en: "Success" },
+  "dashboard.failed": { fr: "Échec", en: "Failed" },
+  "dashboard.viewLog": { fr: "Voir le log", en: "View log" },
+  "dashboard.games": { fr: "Jeux", en: "Games" },
+  "dashboard.users": { fr: "Utilisateurs", en: "Users" },
+  "dashboard.forwarders": { fr: "Forwarders", en: "Forwarders" },
+  "dashboard.screenshots": { fr: "Screenshots", en: "Screenshots" },
+  "dashboard.downloads": { fr: "Téléchargements", en: "Downloads" },
+  "dashboard.today": { fr: "Aujourd'hui", en: "Today" },
+  "dashboard.topDownloads": {
+    fr: "Top téléchargements (30 jours)",
+    en: "Top downloads (30 days)",
+  },
+  "dashboard.statsError": {
+    fr: "Erreur de chargement des statistiques",
+    en: "Error loading statistics",
+  },
+  "dashboard.roms": { fr: "ROMs uploadées", en: "Uploaded ROMs" },
+  "dashboard.incomplete": { fr: "Jeux incomplets", en: "Incomplete games" },
+  "dashboard.noRom": { fr: "Sans ROM", en: "No ROM" },
+  "dashboard.noIcon": { fr: "Sans icône", en: "No icon" },
+  "dashboard.noBoxart": { fr: "Sans boxart", en: "No boxart" },
+  "dashboard.last7": {
+    fr: "Téléchargements — 7 derniers jours",
+    en: "Downloads — last 7 days",
+  },
+  "dashboard.downloads14": {
+    fr: "Téléchargements — 14 derniers jours",
+    en: "Downloads — last 14 days",
+  },
+  "dashboard.recentGames": {
+    fr: "Jeux récemment ajoutés",
+    en: "Recently added games",
+  },
+  "dashboard.updated": { fr: "mis à jour", en: "updated" },
+  "dashboard.nds": { fr: "NDS", en: "NDS" },
+  "dashboard.cia": { fr: "CIA", en: "CIA" },
+  "dashboard.seeStats": { fr: "Toutes les stats →", en: "All stats →" },
+  // Ajoutée lors de la migration précédente — doublon possible avec seeStats, vérifier lequel est utilisé
+  "dashboard.seeDetails": { fr: "Voir détails", en: "See details" },
+
+  // ---------------------------------------------------------------------
+  // Stats
+  // ---------------------------------------------------------------------
+  "stats.title": { fr: "Statistiques détaillées", en: "Detailed statistics" },
+  "stats.subtitle": {
+    fr: "Évolution des téléchargements, répartitions du catalogue et activité.",
+    en: "Download trends, catalog breakdown and activity.",
+  },
+  "stats.refresh": { fr: "Rafraîchir", en: "Refresh" },
+  "stats.statsError": {
+    fr: "Erreur de chargement des statistiques",
+    en: "Error loading statistics",
+  },
+  "stats.games": { fr: "Jeux", en: "Games" },
+  "stats.users": { fr: "Utilisateurs", en: "Users" },
+  "stats.totalDownloads": {
+    fr: "Téléchargements (30 j)",
+    en: "Downloads (30 d)",
+  },
+  "stats.nds": { fr: "NDS", en: "NDS" },
+  "stats.cia": { fr: "CIA", en: "CIA" },
+  "stats.downloads": { fr: "Téléchargements", en: "Downloads" },
+  "stats.downloads30": {
+    fr: "Téléchargements — 30 derniers jours",
+    en: "Downloads — last 30 days",
+  },
+  "stats.topGames": {
+    fr: "Top jeux téléchargés (30 jours)",
+    en: "Top downloaded games (30 days)",
+  },
+  "stats.byVersion": {
+    fr: "Jeux par version / région",
+    en: "Games by version / region",
+  },
+  "stats.bySystem": { fr: "Jeux par système", en: "Games by system" },
+  "stats.byCategory": { fr: "Jeux par catégorie", en: "Games by category" },
+  "stats.gamesByMonth": {
+    fr: "Jeux ajoutés par mois",
+    en: "Games added per month",
+  },
+  "stats.usersByMonth": { fr: "Utilisateurs par mois", en: "Users per month" },
+  "stats.cat.game": { fr: "Jeu", en: "Game" },
+  "stats.cat.homebrew": { fr: "Homebrew", en: "Homebrew" },
+  "stats.cat.emulator": { fr: "Émulateur", en: "Emulator" },
+  // Ajoutées lors de la migration précédente — vérifier si ce découpage période existe réellement
+  "stats.period": { fr: "Période", en: "Period" },
+  "stats.day": { fr: "Jour", en: "Day" },
+  "stats.week": { fr: "Semaine", en: "Week" },
+  "stats.month": { fr: "Mois", en: "Month" },
+  "stats.year": { fr: "Année", en: "Year" },
+  "stats.uniqueUsers": { fr: "Utilisateurs uniques", en: "Unique users" },
+  "stats.byRegion": { fr: "Par région", en: "By region" },
+  "stats.byGenre": { fr: "Par genre", en: "By genre" },
+
+  // ---------------------------------------------------------------------
+  // Users
+  // ---------------------------------------------------------------------
+  "users.title": { fr: "Utilisateurs", en: "Users" },
+  "users.subtitle": {
+    fr: "Gérez les comptes de l'équipe.",
+    en: "Manage team accounts.",
+  },
+  "users.create": { fr: "Créer un compte", en: "Create account" },
+  "users.createTitle": { fr: "Créer un utilisateur", en: "Create user" },
+  "users.username": { fr: "Identifiant", en: "Username" },
+  "users.password": { fr: "Mot de passe", en: "Password" },
+  "users.name": { fr: "Nom complet", en: "Full name" },
+  "users.email": { fr: "Email", en: "Email" },
+  "users.role": { fr: "Rôle", en: "Role" },
+  "users.status": { fr: "Statut", en: "Status" },
+  "users.active": { fr: "Actif", en: "Active" },
+  "users.banned": { fr: "Banni", en: "Banned" },
+  "users.actions": { fr: "Actions", en: "Actions" },
+  "users.edit": { fr: "Modifier", en: "Edit" },
+  "users.setPassword": { fr: "Mot de passe", en: "Password" },
+  "users.ban": { fr: "Bannir", en: "Ban" },
+  "users.unban": { fr: "Débannir", en: "Unban" },
+  "users.delete": { fr: "Supprimer", en: "Delete" },
+  "users.created": { fr: "Utilisateur créé", en: "User created" },
+  "users.updated": { fr: "Infos mises à jour", en: "Info updated" },
+  "users.passwordUpdated": {
+    fr: "Mot de passe mis à jour",
+    en: "Password updated",
+  },
+  "users.deleted": { fr: "Utilisateur supprimé", en: "User deleted" },
+  "users.confirmDelete": {
+    fr: "Supprimer définitivement",
+    en: "Permanently delete",
+  },
+  "users.cannotDeleteSelf": {
+    fr: "Vous ne pouvez pas supprimer votre propre compte.",
+    en: "You cannot delete your own account.",
+  },
+  "users.cannotBanSelf": {
+    fr: "Vous ne pouvez pas bannir votre propre compte.",
+    en: "You cannot ban your own account.",
+  },
+  "users.search": { fr: "Rechercher un utilisateur…", en: "Search user…" },
+  "users.noResults": { fr: "Aucun utilisateur trouvé.", en: "No user found." },
+  "users.newPassword": { fr: "Nouveau mot de passe", en: "New password" },
+  "users.save": { fr: "Enregistrer", en: "Save" },
+  "users.cancel": { fr: "Annuler", en: "Cancel" },
+  // Ajoutées lors de la migration précédente
+  "users.add": { fr: "Ajouter un utilisateur", en: "Add user" },
+  "users.admin": { fr: "Admin", en: "Admin" },
+  "users.inactive": { fr: "Inactif", en: "Inactive" },
+  "users.user": { fr: "Utilisateur", en: "User" },
+  "users.noUsers": { fr: "Aucun utilisateur trouvé", en: "No users found" },
+  "users.passwordPh": {
+    fr: "Laisser vide pour ne pas changer",
+    en: "Leave empty to keep unchanged",
+  },
+
+  // ---------------------------------------------------------------------
+  // Settings
+  // ---------------------------------------------------------------------
+  "settings.title": { fr: "Paramètres", en: "Settings" },
+  "settings.subtitle": {
+    fr: "Gérez votre profil, vos préférences et votre mot de passe.",
+    en: "Manage your profile, preferences and password.",
+  },
+  "settings.profile": { fr: "Profil", en: "Profile" },
+  "settings.username": { fr: "Identifiant", en: "Username" },
+  "settings.usernameNote": {
+    fr: "Ne peut pas être changé.",
+    en: "Cannot be changed.",
+  },
+  "settings.name": { fr: "Nom complet", en: "Full name" },
+  "settings.namePh": { fr: "Votre nom complet", en: "Your full name" },
+  "settings.email": { fr: "Email", en: "Email" },
+  "settings.emailNote": {
+    fr: "Fixé pour sécurité.",
+    en: "Fixed for security.",
+  },
+  "settings.changePassword": {
+    fr: "Changer le mot de passe",
+    en: "Change password",
+  },
+  "settings.currentPassword": {
+    fr: "Mot de passe actuel",
+    en: "Current password",
+  },
+  "settings.newPassword": { fr: "Nouveau mot de passe", en: "New password" },
+  "settings.confirmPassword": {
+    fr: "Confirmer le mot de passe",
+    en: "Confirm password",
+  },
+  "settings.passwordMismatch": {
+    fr: "Les mots de passe ne correspondent pas.",
+    en: "Passwords do not match.",
+  },
+  "settings.save": { fr: "Enregistrer", en: "Save" },
+  "settings.passwordChanged": {
+    fr: "Mot de passe changé avec succès.",
+    en: "Password changed successfully.",
+  },
+  "settings.preferences": { fr: "Préférences", en: "Preferences" },
+  "settings.darkMode": { fr: "Mode sombre", en: "Dark mode" },
+  "settings.language": { fr: "Langue", en: "Language" },
+  "settings.saved": { fr: "Enregistré.", en: "Saved." },
+  // Ajoutées lors de la migration précédente
+  "settings.appearance": { fr: "Apparence", en: "Appearance" },
+  "settings.system": { fr: "Système", en: "System" },
+  "settings.notifications": { fr: "Notifications", en: "Notifications" },
+
+  // ---------------------------------------------------------------------
+  // Team
+  // ---------------------------------------------------------------------
+  "team.title": { fr: "Équipe", en: "Team" },
+  "team.subtitle": {
+    fr: "Sélectionnez les membres Discord affichés sur la page À propos.",
+    en: "Select the Discord members shown on the About page.",
+  },
+  "team.save": { fr: "Enregistrer", en: "Save" },
+  "team.refresh": { fr: "Actualiser", en: "Refresh" },
+  "team.saved": { fr: "Équipe sauvegardée", en: "Team saved" },
+  "team.search": { fr: "Rechercher un membre…", en: "Search member…" },
+  "team.members": { fr: "membres", en: "members" },
+  "team.online": { fr: "en ligne", en: "online" },
+  "team.teamBadge": { fr: "Équipe", en: "Team" },
+  "team.loading": { fr: "Chargement…", en: "Loading…" },
+  "team.noMembers": {
+    fr: "Aucun membre trouvé (vérifier le token Discord côté serveur).",
+    en: "No member found (check the Discord token server-side).",
+  },
+  "team.noResults": { fr: "Aucun résultat.", en: "No results." },
+
+  // ---------------------------------------------------------------------
+  // Build
+  // ---------------------------------------------------------------------
+  "build.title": { fr: "Build", en: "Build" },
+  "build.subtitle": {
+    fr: "Lancez un build du site et suivez sa progression en temps réel.",
+    en: "Launch a site build and follow its progress in real time.",
+  },
+  "build.about": { fr: "À propos du build", en: "About the build" },
+  "build.aboutText": {
+    fr: "Le build régénère automatiquement :",
+    en: "The build automatically regenerates:",
+  },
+  "build.aboutIcons": {
+    fr: "Les icônes extraites des ROMs",
+    en: "Icons extracted from ROMs",
+  },
+  "build.aboutBoxarts": {
+    fr: "Les boxarts et screenshots (libretro)",
+    en: "Boxarts and screenshots (libretro)",
+  },
+  "build.aboutPages": {
+    fr: "Les pages du site + games.json",
+    en: "Site pages + games.json",
+  },
+  "build.aboutForwarders": {
+    fr: "Les forwarders .cia (skippés si déjà générés)",
+    en: ".cia forwarders (skipped if already generated)",
+  },
+  "build.launch": { fr: "Lancer le build", en: "Launch build" },
+  "build.building": { fr: "Build en cours…", en: "Building…" },
+  "build.launched": { fr: "Build lancé.", en: "Build launched." },
+  "build.status": { fr: "Statut", en: "Status" },
+  "build.noBuild": { fr: "Aucun build effectué.", en: "No build yet." },
+  "build.success": { fr: "Succès", en: "Success" },
+  "build.failed": { fr: "Échec", en: "Failed" },
+  "build.log": { fr: "Log", en: "Log" },
+  "build.viewLog": { fr: "Voir le log", en: "View log" },
+
+  // ---------------------------------------------------------------------
+  // Games
+  // ---------------------------------------------------------------------
+  "games.title": { fr: "Bibliothèque de jeux", en: "Game library" },
+  "games.subtitle": {
+    fr: "Gérez vos fichiers JSON et métadonnées.",
+    en: "Manage your JSON files and metadata.",
+  },
+  "games.search": {
+    fr: "Rechercher par titre ou auteur...",
+    en: "Search by title or author...",
+  },
+  "games.add": { fr: "Ajouter un jeu", en: "Add game" },
+  "games.sortBy": { fr: "Trier par", en: "Sort by" },
+  "games.sortOrder": { fr: "Ordre", en: "Order" },
+  "games.titleCol": { fr: "Titre", en: "Title" },
+  "games.authorCol": { fr: "Auteur", en: "Author" },
+  "games.updatedCol": { fr: "Mise à jour", en: "Updated" },
+  "games.asc": { fr: "Croissant", en: "Ascending" },
+  "games.desc": { fr: "Décroissant", en: "Descending" },
+  "games.noResults": { fr: "Aucun jeu trouvé.", en: "No game found." },
+  "games.noResultsHint": {
+    fr: "Essayez de modifier votre recherche ou ajoutez un nouveau jeu.",
+    en: "Try changing your search or add a new game.",
+  },
+  "games.edit": { fr: "Modifier", en: "Edit" },
+  "games.loading": { fr: "Chargement…", en: "Loading…" },
+  "games.delete": { fr: "Supprimer", en: "Delete" },
+  // Ajoutées lors de la migration précédente — vérifier si ces champs (serial, wifi, players...) existent dans ton modèle de jeu
+  "games.titleLabel": { fr: "Titre", en: "Title" },
+  "games.serial": { fr: "Numéro de série", en: "Serial" },
+  "games.region": { fr: "Région", en: "Region" },
+  "games.languages": { fr: "Langues", en: "Languages" },
+  "games.developer": { fr: "Développeur", en: "Developer" },
+  "games.publisher": { fr: "Éditeur", en: "Publisher" },
+  "games.releaseDate": { fr: "Date de sortie", en: "Release date" },
+  "games.genre": { fr: "Genre", en: "Genre" },
+  "games.players": { fr: "Joueurs", en: "Players" },
+  "games.wifi": { fr: "WiFi", en: "WiFi" },
+  "games.description": { fr: "Description", en: "Description" },
+  "games.romFile": { fr: "Fichier ROM", en: "ROM file" },
+  "games.iconFile": { fr: "Fichier icône", en: "Icon file" },
+  "games.boxartFile": { fr: "Fichier boxart", en: "Boxart file" },
+  "games.screenshots": { fr: "Screenshots", en: "Screenshots" },
+  "games.save": { fr: "Enregistrer", en: "Save" },
+  "games.cancel": { fr: "Annuler", en: "Cancel" },
+  "games.romUploaded": { fr: "ROM uploadée", en: "ROM uploaded" },
+  "games.iconUploaded": { fr: "Icône uploadée", en: "Icon uploaded" },
+  "games.boxartUploaded": { fr: "Boxart uploadé", en: "Boxart uploaded" },
+  "games.screenshotUploaded": {
+    fr: "Screenshot uploadé",
+    en: "Screenshot uploaded",
+  },
+  "games.fileTooLarge": {
+    fr: "Fichier trop volumineux (max 100 Mo)",
+    en: "File too large (max 100 MB)",
+  },
+  "games.invalidFile": {
+    fr: "Type de fichier invalide",
+    en: "Invalid file type",
+  },
+  "games.requiredField": { fr: "Champ requis", en: "Required field" },
+  "games.noGames": { fr: "Aucun jeu trouvé", en: "No games found" },
+  "games.confirmDelete": {
+    fr: "Confirmer la suppression de ce jeu ?",
+    en: "Confirm delete this game?",
+  },
+
+  // ---------------------------------------------------------------------
+  // EditGame
+  // ---------------------------------------------------------------------
+  "edit.loading": {
+    fr: "Chargement des données du jeu...",
+    en: "Loading game data...",
+  },
+  "edit.back": { fr: "Retour à la liste", en: "Back to list" },
+  "edit.new": { fr: "Nouveau Jeu", en: "New game" },
+  "edit.edit": { fr: "Éditer:", en: "Edit:" },
+  "edit.description": {
+    fr: "Remplissez les métadonnées et uploadez les fichiers nécessaires.",
+    en: "Fill in the metadata and upload the required files.",
+  },
+  "edit.title": { fr: "Titre du jeu *", en: "Game title *" },
+  "edit.titlePh": {
+    fr: "Ex: Pokémon Version Platine",
+    en: "e.g. Pokémon Platinum Version",
+  },
+  "edit.author": { fr: "Auteur / Éditeur", en: "Author / Publisher" },
+  "edit.authorPh": { fr: "Ex: Nintendo", en: "e.g. Nintendo" },
+  "edit.titleId": { fr: "Title ID", en: "Title ID" },
+  "edit.titleIdAuto": {
+    fr: "Rempli automatiquement par l'analyse de la ROM.",
+    en: "Auto-filled by the ROM analysis.",
+  },
+  "edit.categories": { fr: "Catégories", en: "Categories" },
+  "edit.systems": { fr: "Systèmes compatibles", en: "Supported systems" },
+  "edit.version": { fr: "Version / Région", en: "Version / Region" },
+  "edit.files": { fr: "Fichiers & Assets", en: "Files & Assets" },
+  "edit.romLabel": { fr: "ROM du jeu (.nds)", en: "Game ROM (.nds)" },
+  "edit.iconAuto": { fr: "Icône", en: "Icon" },
+  "edit.iconAutoText": {
+    fr: "Extraite automatiquement de la ROM au build.",
+    en: "Extracted automatically from the ROM at build.",
+  },
+  "edit.shotsAuto": { fr: "Screenshots", en: "Screenshots" },
+  "edit.shotsAutoText": {
+    fr: "Téléchargés automatiquement (libretro) au build.",
+    en: "Downloaded automatically (libretro) at build.",
+  },
+  "edit.fwdAuto": { fr: "Forwarder (.cia)", en: "Forwarder (.cia)" },
+  "edit.fwdAutoText": {
+    fr: "Généré automatiquement à partir de la ROM au build.",
+    en: "Generated automatically from the ROM at build.",
+  },
+  "edit.iconLabel": { fr: "Icône (1 seul)", en: "Icon (1 only)" },
+  "edit.shotsLabel": {
+    fr: "Screenshots (Multiples)",
+    en: "Screenshots (Multiple)",
+  },
+  "edit.fwdLabel": { fr: "Forwarder (.cia)", en: "Forwarder (.cia)" },
+  "edit.create": { fr: "Créer le jeu", en: "Create game" },
+  "edit.update": { fr: "Mettre à jour", en: "Update" },
+  "edit.analyzeFail": {
+    fr: "Analyse ROM impossible",
+    en: "ROM analysis failed",
+  },
+  "edit.loadFail": {
+    fr: "Erreur lors du chargement du jeu",
+    en: "Error loading game",
+  },
+  "edit.loadDataFail": { fr: "Erreur de chargement", en: "Loading error" },
+  "edit.uploadFail": { fr: "Erreur upload", en: "Upload error" },
+  "edit.titleRequired": {
+    fr: "Le titre est obligatoire",
+    en: "Title is required",
+  },
+  "edit.exists": { fr: "Ce jeu existe déjà", en: "This game already exists" },
+  "edit.saved": {
+    fr: "Jeu enregistré avec succès",
+    en: "Game saved successfully",
+  },
+  "edit.saveFail": {
+    fr: "Erreur lors de la sauvegarde",
+    en: "Error while saving",
+  },
+  "edit.publisher": { fr: "Éditeur", en: "Publisher" },
+  "edit.developer": { fr: "Développeur", en: "Developer" },
+  "edit.genres": { fr: "Genres", en: "Genres" },
+  "edit.genresHint": {
+    fr: "Séparés par des virgules. Auto-remplis par l'analyse.",
+    en: "Comma separated. Auto-filled by analysis.",
+  },
+  "edit.descLabel": { fr: "Description", en: "Description" },
+  "edit.descHint": {
+    fr: "Résumé du jeu. Auto-remplie via ndsdb si disponible.",
+    en: "Game summary. Auto-filled via ndsdb when available.",
+  },
+
+  // ---------------------------------------------------------------------
+  // NotFound
+  // ---------------------------------------------------------------------
+  "notFound.title": { fr: "404", en: "404" },
+  "notFound.message": {
+    fr: "Oups ! Page introuvable.",
+    en: "Oops! Page not found.",
+  },
+  "notFound.description": {
+    fr: "La page que vous recherchez n'existe pas, a été supprimée ou a été déplacée.",
+    en: "The page you are looking for does not exist, was deleted or moved.",
+  },
+  "notFound.back": { fr: "Retour à l'accueil", en: "Back to home" },
+
+  // ---------------------------------------------------------------------
+  // Forwarders — ajoutées lors de la migration précédente, vérifier si cette page existe réellement
+  // ---------------------------------------------------------------------
+  "forwarders.title": { fr: "Forwarders", en: "Forwarders" },
+  "forwarders.add": { fr: "Ajouter un forwarder", en: "Add forwarder" },
+  "forwarders.edit": { fr: "Modifier", en: "Edit" },
+  "forwarders.delete": { fr: "Supprimer", en: "Delete" },
+  "forwarders.name": { fr: "Nom", en: "Name" },
+  "forwarders.url": { fr: "URL", en: "URL" },
+  "forwarders.enabled": { fr: "Activé", en: "Enabled" },
+  "forwarders.disabled": { fr: "Désactivé", en: "Disabled" },
+
+  // ---------------------------------------------------------------------
+  // Screenshots — ajoutées lors de la migration précédente, vérifier si cette page existe réellement
+  // ---------------------------------------------------------------------
+  "screenshots.title": { fr: "Screenshots", en: "Screenshots" },
+  "screenshots.add": { fr: "Ajouter screenshot", en: "Add screenshot" },
+  "screenshots.edit": { fr: "Modifier", en: "Edit" },
+  "screenshots.delete": { fr: "Supprimer", en: "Delete" },
+  "screenshots.game": { fr: "Jeu", en: "Game" },
+  "screenshots.image": { fr: "Image", en: "Image" },
+  "screenshots.order": { fr: "Ordre", en: "Order" },
+
+  // ---------------------------------------------------------------------
+  // Blacklist — ajoutées lors de la migration précédente, vérifier si cette page existe réellement
+  // ---------------------------------------------------------------------
+  "blacklist.title": { fr: "Blacklist", en: "Blacklist" },
+  "blacklist.add": { fr: "Ajouter à la blacklist", en: "Add to blacklist" },
+  "blacklist.remove": { fr: "Retirer", en: "Remove" },
+  "blacklist.ip": { fr: "Adresse IP", en: "IP address" },
+  "blacklist.reason": { fr: "Raison", en: "Reason" },
+  "blacklist.noEntries": { fr: "Aucune entrée", en: "No entries" },
+
+  // ---------------------------------------------------------------------
+  // Common — petits libellés génériques ajoutés lors de la migration précédente
+  // ---------------------------------------------------------------------
+  "common.save": { fr: "Enregistrer", en: "Save" },
+  "common.cancel": { fr: "Annuler", en: "Cancel" },
+  "common.delete": { fr: "Supprimer", en: "Delete" },
+  "common.edit": { fr: "Modifier", en: "Edit" },
+  "common.add": { fr: "Ajouter", en: "Add" },
+  "common.search": { fr: "Rechercher", en: "Search" },
+  "common.loading": { fr: "Chargement...", en: "Loading..." },
+  "common.error": { fr: "Erreur", en: "Error" },
+  "common.success": { fr: "Succès", en: "Success" },
+  "common.confirm": { fr: "Confirmer", en: "Confirm" },
+  "common.yes": { fr: "Oui", en: "Yes" },
+  "common.no": { fr: "Non", en: "No" },
+  "common.close": { fr: "Fermer", en: "Close" },
+  "common.back": { fr: "Retour", en: "Back" },
+  "common.next": { fr: "Suivant", en: "Next" },
+  "common.previous": { fr: "Précédent", en: "Previous" },
+};
+
 interface UIContextValue {
-  darkMode: boolean;
   lang: Lang;
-  toggleDarkMode: () => void;
-  toggleLang: () => void;
+  setLang: (l: Lang) => void;
+  dark: boolean;
+  toggleDark: () => void;
   t: (key: string) => string;
 }
 
 const UIContext = createContext<UIContextValue | null>(null);
 
 export function UIProvider({ children }: { children: ReactNode }) {
-  const [darkMode, setDarkMode] = useState<boolean>(() =>
-    localStorage.getItem("darkMode") === "true"
+  const [lang, setLangState] = useState<Lang>(
+    () => (localStorage.getItem("botLang") as Lang) || "fr",
   );
-  const [lang, setLang] = useState<Lang>(() =>
-    (localStorage.getItem("adminLang") as Lang) || "fr"
+  const [dark, setDark] = useState<boolean>(
+    () => (localStorage.getItem("botDark") ?? "dark") === "dark",
   );
 
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", darkMode);
-    localStorage.setItem("darkMode", darkMode ? "true" : "false");
-  }, [darkMode]);
+    document.documentElement.classList.toggle("dark", dark);
+  }, [dark]);
 
-  useEffect(() => {
-    document.documentElement.lang = lang;
-    localStorage.setItem("adminLang", lang);
-  }, [lang]);
+  const setLang = (l: Lang) => {
+    localStorage.setItem("botLang", l);
+    setLangState(l);
+  };
 
-  const toggleDarkMode = () => setDarkMode((v) => !v);
-  const toggleLang = () => setLang((v) => (v === "fr" ? "en" : "fr"));
+  const toggleDark = () => {
+    const next = !dark;
+    localStorage.setItem("botDark", next ? "dark" : "light");
+    setDark(next);
+  };
+
+  const t = (key: string) => DICT[key]?.[lang] ?? key;
 
   return (
-    <UIContext.Provider value={{ darkMode, lang, toggleDarkMode, toggleLang, t: (k) => translate(lang, k) }}>
+    <UIContext.Provider value={{ lang, setLang, dark, toggleDark, t }}>
       {children}
     </UIContext.Provider>
   );
@@ -45,500 +648,3 @@ export function useUI() {
   if (!ctx) throw new Error("useUI must be used within UIProvider");
   return ctx;
 }
-
-function translate(lang: Lang, key: string): string {
-  const table = lang === "fr" ? fr : en;
-  return table[key] ?? key;
-}
-
-// ---------------------------------------------------------------------------
-// Traductions centralisées (fr / en)
-// ---------------------------------------------------------------------------
-const fr: Record<string, string> = {
-  // Layout / navigation
-  "nav.dashboard": "Dashboard",
-  "nav.stats": "Stats",
-  "nav.games": "Bibliothèque",
-  "nav.users": "Utilisateurs",
-  "nav.team": "Équipe",
-  "nav.build": "Build",
-  "nav.settings": "Paramètres",
-  "nav.logout": "Déconnexion",
-  "nav.backoffice": "Back-office",
-  "nav.menu": "Menu",
-
-  // Requests (demandes de jeux)
-  "requests.title": "Demandes de jeux",
-  "requests.subtitle": "Demandes en attente depuis le site public.",
-  "requests.refresh": "Rafraîchir",
-  "requests.systemsCol": "Systèmes",
-  "requests.requesterCol": "Demandeur",
-  "requests.dateCol": "Date",
-  "requests.votesCol": "Votes",
-  "requests.delete": "Supprimer",
-  "requests.confirmDelete": "Supprimer cette demande ?",
-  "requests.deleted": "Demande supprimée",
-  "requests.empty": "Aucune demande en attente.",
-  "requests.anonymous": "Anonyme",
-
-  // Login
-  "login.title": "Connexion",
-  "login.subtitle": "Connectez-vous pour accéder au back-office.",
-  "login.username": "Identifiant",
-  "login.usernamePh": "Votre identifiant",
-  "login.password": "Mot de passe",
-  "login.passwordPh": "••••••••",
-  "login.error": "Identifiants incorrects",
-  "login.serverError": "Erreur de connexion au serveur",
-  "login.loading": "Connexion en cours...",
-  "login.button": "Se connecter",
-  "login.reserved": "Accès réservé à l'équipe NDS-Shop",
-  "login.adminTitle": "Administration",
-  "login.tagline": "Espace d'administration du site NDS-Shop.",
-
-  // Dashboard
-  "dashboard.title": "Dashboard",
-  "dashboard.greeting": "Bonjour",
-  "dashboard.role": "rôle",
-  "dashboard.refresh": "Rafraîchir",
-  "dashboard.lastBuild": "Dernier build",
-  "dashboard.noBuild": "Aucun build effectué",
-  "dashboard.success": "Succès",
-  "dashboard.failed": "Échec",
-  "dashboard.viewLog": "Voir le log",
-  "dashboard.games": "Jeux",
-  "dashboard.users": "Utilisateurs",
-  "dashboard.forwarders": "Forwarders",
-  "dashboard.screenshots": "Screenshots",
-  "dashboard.downloads": "Téléchargements",
-  "dashboard.today": "Aujourd'hui",
-  "dashboard.topDownloads": "Top téléchargements (30 jours)",
-  "dashboard.statsError": "Erreur de chargement des statistiques",
-  "dashboard.roms": "ROMs uploadées",
-  "dashboard.incomplete": "Jeux incomplets",
-  "dashboard.noRom": "Sans ROM",
-  "dashboard.noIcon": "Sans icône",
-  "dashboard.noBoxart": "Sans boxart",
-  "dashboard.last7": "Téléchargements — 7 derniers jours",
-  "dashboard.downloads14": "Téléchargements — 14 derniers jours",
-  "dashboard.recentGames": "Jeux récemment ajoutés",
-  "dashboard.updated": "mis à jour",
-  "dashboard.nds": "NDS",
-  "dashboard.cia": "CIA",
-  "dashboard.seeStats": "Toutes les stats →",
-
-  // Stats
-  "stats.title": "Statistiques détaillées",
-  "stats.subtitle": "Évolution des téléchargements, répartitions du catalogue et activité.",
-  "stats.refresh": "Rafraîchir",
-  "stats.statsError": "Erreur de chargement des statistiques",
-  "stats.games": "Jeux",
-  "stats.users": "Utilisateurs",
-  "stats.totalDownloads": "Téléchargements (30 j)",
-  "stats.nds": "NDS",
-  "stats.cia": "CIA",
-  "stats.downloads": "Téléchargements",
-  "stats.downloads30": "Téléchargements — 30 derniers jours",
-  "stats.topGames": "Top jeux téléchargés (30 jours)",
-  "stats.byVersion": "Jeux par version / région",
-  "stats.bySystem": "Jeux par système",
-  "stats.byCategory": "Jeux par catégorie",
-  "stats.gamesByMonth": "Jeux ajoutés par mois",
-  "stats.usersByMonth": "Utilisateurs par mois",
-  "stats.cat.game": "Jeu",
-  "stats.cat.homebrew": "Homebrew",
-  "stats.cat.emulator": "Émulateur",
-
-  // Users
-  "users.title": "Utilisateurs",
-  "users.subtitle": "Gérez les comptes de l'équipe.",
-  "users.create": "Créer un compte",
-  "users.createTitle": "Créer un utilisateur",
-  "users.username": "Identifiant",
-  "users.password": "Mot de passe",
-  "users.name": "Nom complet",
-  "users.email": "Email",
-  "users.role": "Rôle",
-  "users.status": "Statut",
-  "users.active": "Actif",
-  "users.banned": "Banni",
-  "users.actions": "Actions",
-  "users.edit": "Modifier",
-  "users.setPassword": "Mot de passe",
-  "users.ban": "Bannir",
-  "users.unban": "Débannir",
-  "users.delete": "Supprimer",
-  "users.created": "Utilisateur créé",
-  "users.updated": "Infos mises à jour",
-  "users.passwordUpdated": "Mot de passe mis à jour",
-  "users.deleted": "Utilisateur supprimé",
-  "users.confirmDelete": "Supprimer définitivement",
-  "users.cannotDeleteSelf": "Vous ne pouvez pas supprimer votre propre compte.",
-  "users.cannotBanSelf": "Vous ne pouvez pas bannir votre propre compte.",
-  "users.search": "Rechercher un utilisateur…",
-  "users.noResults": "Aucun utilisateur trouvé.",
-  "users.newPassword": "Nouveau mot de passe",
-  "users.save": "Enregistrer",
-  "users.cancel": "Annuler",
-
-  // Settings
-  "settings.title": "Paramètres",
-  "settings.subtitle": "Gérez votre profil, vos préférences et votre mot de passe.",
-  "settings.profile": "Profil",
-  "settings.username": "Identifiant",
-  "settings.usernameNote": "Ne peut pas être changé.",
-  "settings.name": "Nom complet",
-  "settings.namePh": "Votre nom complet",
-  "settings.email": "Email",
-  "settings.emailNote": "Fixé pour sécurité.",
-  "settings.changePassword": "Changer le mot de passe",
-  "settings.currentPassword": "Mot de passe actuel",
-  "settings.newPassword": "Nouveau mot de passe",
-  "settings.confirmPassword": "Confirmer le mot de passe",
-  "settings.passwordMismatch": "Les mots de passe ne correspondent pas.",
-  "settings.save": "Enregistrer",
-  "settings.passwordChanged": "Mot de passe changé avec succès.",
-  "settings.preferences": "Préférences",
-  "settings.darkMode": "Mode sombre",
-  "settings.language": "Langue",
-  "settings.saved": "Enregistré.",
-
-  // Team
-  "team.title": "Équipe",
-  "team.subtitle": "Sélectionnez les membres Discord affichés sur la page À propos.",
-  "team.save": "Enregistrer",
-  "team.refresh": "Actualiser",
-  "team.saved": "Équipe sauvegardée",
-  "team.search": "Rechercher un membre…",
-  "team.members": "membres",
-  "team.online": "en ligne",
-  "team.teamBadge": "Équipe",
-  "team.loading": "Chargement…",
-  "team.noMembers": "Aucun membre trouvé (vérifier le token Discord côté serveur).",
-  "team.noResults": "Aucun résultat.",
-
-  // Build
-  "build.title": "Build",
-  "build.subtitle": "Lancez un build du site et suivez sa progression en temps réel.",
-  "build.about": "À propos du build",
-  "build.aboutText": "Le build régénère automatiquement :",
-  "build.aboutIcons": "Les icônes extraites des ROMs",
-  "build.aboutBoxarts": "Les boxarts et screenshots (libretro)",
-  "build.aboutPages": "Les pages du site + games.json",
-  "build.aboutForwarders": "Les forwarders .cia (skippés si déjà générés)",
-  "build.launch": "Lancer le build",
-  "build.building": "Build en cours…",
-  "build.launched": "Build lancé.",
-  "build.status": "Statut",
-  "build.noBuild": "Aucun build effectué.",
-  "build.success": "Succès",
-  "build.failed": "Échec",
-  "build.log": "Log",
-  "build.viewLog": "Voir le log",
-
-  // Games
-  "games.title": "Bibliothèque de jeux",
-  "games.subtitle": "Gérez vos fichiers JSON et métadonnées.",
-  "games.search": "Rechercher par titre ou auteur...",
-  "games.add": "Ajouter un jeu",
-  "games.sortBy": "Trier par",
-  "games.sortOrder": "Ordre",
-  "games.titleCol": "Titre",
-  "games.authorCol": "Auteur",
-  "games.updatedCol": "Mise à jour",
-  "games.asc": "Croissant",
-  "games.desc": "Décroissant",
-  "games.noResults": "Aucun jeu trouvé.",
-  "games.noResultsHint": "Essayez de modifier votre recherche ou ajoutez un nouveau jeu.",
-  "games.edit": "Modifier",
-  "games.loading": "Chargement…",
-
-  // EditGame
-  "edit.loading": "Chargement des données du jeu...",
-  "edit.back": "Retour à la liste",
-  "edit.new": "Nouveau Jeu",
-  "edit.edit": "Éditer:",
-  "edit.description": "Remplissez les métadonnées et uploadez les fichiers nécessaires.",
-  "edit.title": "Titre du jeu *",
-  "edit.titlePh": "Ex: Pokémon Version Platine",
-  "edit.author": "Auteur / Éditeur",
-  "edit.authorPh": "Ex: Nintendo",
-  "edit.titleId": "Title ID",
-  "edit.titleIdAuto": "Rempli automatiquement par l'analyse de la ROM.",
-  "edit.categories": "Catégories",
-  "edit.systems": "Systèmes compatibles",
-  "edit.version": "Version / Région",
-  "edit.files": "Fichiers & Assets",
-  "edit.romLabel": "ROM du jeu (.nds)",
-  "edit.iconAuto": "Icône",
-  "edit.iconAutoText": "Extraite automatiquement de la ROM au build.",
-  "edit.shotsAuto": "Screenshots",
-  "edit.shotsAutoText": "Téléchargés automatiquement (libretro) au build.",
-  "edit.fwdAuto": "Forwarder (.cia)",
-  "edit.fwdAutoText": "Généré automatiquement à partir de la ROM au build.",
-  "edit.iconLabel": "Icône (1 seul)",
-  "edit.shotsLabel": "Screenshots (Multiples)",
-  "edit.fwdLabel": "Forwarder (.cia)",
-  "edit.create": "Créer le jeu",
-  "edit.update": "Mettre à jour",
-  "edit.analyzeFail": "Analyse ROM impossible",
-  "edit.loadFail": "Erreur lors du chargement du jeu",
-  "edit.loadDataFail": "Erreur de chargement",
-  "edit.uploadFail": "Erreur upload",
-  "edit.titleRequired": "Le titre est obligatoire",
-  "edit.exists": "Ce jeu existe déjà",
-  "edit.saved": "Jeu enregistré avec succès",
-  "edit.saveFail": "Erreur lors de la sauvegarde",
-  "edit.publisher": "Éditeur",
-  "edit.developer": "Développeur",
-  "edit.genres": "Genres",
-  "edit.genresHint": "Séparés par des virgules. Auto-remplis par l'analyse.",
-  "edit.descLabel": "Description",
-  "edit.descHint": "Résumé du jeu. Auto-remplie via ndsdb si disponible.",
-
-  // NotFound
-  "notFound.title": "404",
-  "notFound.message": "Oups ! Page introuvable.",
-  "notFound.description": "La page que vous recherchez n'existe pas, a été supprimée ou a été déplacée.",
-  "notFound.back": "Retour à l'accueil",
-};
-
-const en: Record<string, string> = {
-  "nav.dashboard": "Dashboard",
-  "nav.stats": "Stats",
-  "nav.games": "Library",
-  "nav.users": "Users",
-  "nav.team": "Team",
-  "nav.build": "Build",
-  "nav.settings": "Settings",
-  "nav.logout": "Log out",
-  "nav.backoffice": "Back-office",
-  "nav.menu": "Menu",
-
-  // Requests (game requests)
-  "requests.title": "Game requests",
-  "requests.subtitle": "Pending requests from the public site.",
-  "requests.refresh": "Refresh",
-  "requests.systemsCol": "Systems",
-  "requests.requesterCol": "Requester",
-  "requests.dateCol": "Date",
-  "requests.votesCol": "Votes",
-  "requests.delete": "Delete",
-  "requests.confirmDelete": "Delete this request?",
-  "requests.deleted": "Request deleted",
-  "requests.empty": "No pending requests.",
-  "requests.anonymous": "Anonymous",
-
-  "login.title": "Sign in",
-  "login.subtitle": "Sign in to access the back-office.",
-  "login.username": "Username",
-  "login.usernamePh": "Your username",
-  "login.password": "Password",
-  "login.passwordPh": "••••••••",
-  "login.error": "Invalid credentials",
-  "login.serverError": "Connection error",
-  "login.loading": "Signing in...",
-  "login.button": "Sign in",
-  "login.reserved": "Access reserved to the NDS-Shop team",
-  "login.adminTitle": "Administration",
-  "login.tagline": "Administration area of the NDS-Shop website.",
-
-  "dashboard.title": "Dashboard",
-  "dashboard.greeting": "Hello",
-  "dashboard.role": "role",
-  "dashboard.refresh": "Refresh",
-  "dashboard.lastBuild": "Last build",
-  "dashboard.noBuild": "No build yet",
-  "dashboard.success": "Success",
-  "dashboard.failed": "Failed",
-  "dashboard.viewLog": "View log",
-  "dashboard.games": "Games",
-  "dashboard.users": "Users",
-  "dashboard.forwarders": "Forwarders",
-  "dashboard.screenshots": "Screenshots",
-  "dashboard.downloads": "Downloads",
-  "dashboard.today": "Today",
-  "dashboard.topDownloads": "Top downloads (30 days)",
-  "dashboard.statsError": "Error loading statistics",
-  "dashboard.roms": "Uploaded ROMs",
-  "dashboard.incomplete": "Incomplete games",
-  "dashboard.noRom": "No ROM",
-  "dashboard.noIcon": "No icon",
-  "dashboard.noBoxart": "No boxart",
-  "dashboard.last7": "Downloads — last 7 days",
-  "dashboard.downloads14": "Downloads — last 14 days",
-  "dashboard.recentGames": "Recently added games",
-  "dashboard.updated": "updated",
-  "dashboard.nds": "NDS",
-  "dashboard.cia": "CIA",
-  "dashboard.seeStats": "All stats →",
-
-  // Stats
-  "stats.title": "Detailed statistics",
-  "stats.subtitle": "Download trends, catalog breakdown and activity.",
-  "stats.refresh": "Refresh",
-  "stats.statsError": "Error loading statistics",
-  "stats.games": "Games",
-  "stats.users": "Users",
-  "stats.totalDownloads": "Downloads (30 d)",
-  "stats.nds": "NDS",
-  "stats.cia": "CIA",
-  "stats.downloads": "Downloads",
-  "stats.downloads30": "Downloads — last 30 days",
-  "stats.topGames": "Top downloaded games (30 days)",
-  "stats.byVersion": "Games by version / region",
-  "stats.bySystem": "Games by system",
-  "stats.byCategory": "Games by category",
-  "stats.gamesByMonth": "Games added per month",
-  "stats.usersByMonth": "Users per month",
-  "stats.cat.game": "Game",
-  "stats.cat.homebrew": "Homebrew",
-  "stats.cat.emulator": "Emulator",
-
-  "users.title": "Users",
-  "users.subtitle": "Manage team accounts.",
-  "users.create": "Create account",
-  "users.createTitle": "Create user",
-  "users.username": "Username",
-  "users.password": "Password",
-  "users.name": "Full name",
-  "users.email": "Email",
-  "users.role": "Role",
-  "users.status": "Status",
-  "users.active": "Active",
-  "users.banned": "Banned",
-  "users.actions": "Actions",
-  "users.edit": "Edit",
-  "users.setPassword": "Password",
-  "users.ban": "Ban",
-  "users.unban": "Unban",
-  "users.delete": "Delete",
-  "users.created": "User created",
-  "users.updated": "Info updated",
-  "users.passwordUpdated": "Password updated",
-  "users.deleted": "User deleted",
-  "users.confirmDelete": "Permanently delete",
-  "users.cannotDeleteSelf": "You cannot delete your own account.",
-  "users.cannotBanSelf": "You cannot ban your own account.",
-  "users.search": "Search user…",
-  "users.noResults": "No user found.",
-  "users.newPassword": "New password",
-  "users.save": "Save",
-  "users.cancel": "Cancel",
-
-  "settings.title": "Settings",
-  "settings.subtitle": "Manage your profile, preferences and password.",
-  "settings.profile": "Profile",
-  "settings.username": "Username",
-  "settings.usernameNote": "Cannot be changed.",
-  "settings.name": "Full name",
-  "settings.namePh": "Your full name",
-  "settings.email": "Email",
-  "settings.emailNote": "Fixed for security.",
-  "settings.changePassword": "Change password",
-  "settings.currentPassword": "Current password",
-  "settings.newPassword": "New password",
-  "settings.confirmPassword": "Confirm password",
-  "settings.passwordMismatch": "Passwords do not match.",
-  "settings.save": "Save",
-  "settings.passwordChanged": "Password changed successfully.",
-  "settings.preferences": "Preferences",
-  "settings.darkMode": "Dark mode",
-  "settings.language": "Language",
-  "settings.saved": "Saved.",
-
-  "team.title": "Team",
-  "team.subtitle": "Select the Discord members shown on the About page.",
-  "team.save": "Save",
-  "team.refresh": "Refresh",
-  "team.saved": "Team saved",
-  "team.search": "Search member…",
-  "team.members": "members",
-  "team.online": "online",
-  "team.teamBadge": "Team",
-  "team.loading": "Loading…",
-  "team.noMembers": "No member found (check the Discord token server-side).",
-  "team.noResults": "No results.",
-
-  "build.title": "Build",
-  "build.subtitle": "Launch a site build and follow its progress in real time.",
-  "build.about": "About the build",
-  "build.aboutText": "The build automatically regenerates:",
-  "build.aboutIcons": "Icons extracted from ROMs",
-  "build.aboutBoxarts": "Boxarts and screenshots (libretro)",
-  "build.aboutPages": "Site pages + games.json",
-  "build.aboutForwarders": ".cia forwarders (skipped if already generated)",
-  "build.launch": "Launch build",
-  "build.building": "Building…",
-  "build.launched": "Build launched.",
-  "build.status": "Status",
-  "build.noBuild": "No build yet.",
-  "build.success": "Success",
-  "build.failed": "Failed",
-  "build.log": "Log",
-  "build.viewLog": "View log",
-
-  "games.title": "Game library",
-  "games.subtitle": "Manage your JSON files and metadata.",
-  "games.search": "Search by title or author...",
-  "games.add": "Add game",
-  "games.sortBy": "Sort by",
-  "games.sortOrder": "Order",
-  "games.titleCol": "Title",
-  "games.authorCol": "Author",
-  "games.updatedCol": "Updated",
-  "games.asc": "Ascending",
-  "games.desc": "Descending",
-  "games.noResults": "No game found.",
-  "games.noResultsHint": "Try changing your search or add a new game.",
-  "games.edit": "Edit",
-  "games.loading": "Loading…",
-
-  // EditGame
-  "edit.loading": "Loading game data...",
-  "edit.back": "Back to list",
-  "edit.new": "New Game",
-  "edit.edit": "Edit:",
-  "edit.description": "Fill in the metadata and upload the required files.",
-  "edit.title": "Game title *",
-  "edit.titlePh": "e.g. Pokémon Platinum Version",
-  "edit.author": "Author / Publisher",
-  "edit.authorPh": "e.g. Nintendo",
-  "edit.titleId": "Title ID",
-  "edit.titleIdAuto": "Auto-filled by the ROM analysis.",
-  "edit.categories": "Categories",
-  "edit.systems": "Supported systems",
-  "edit.version": "Version / Region",
-  "edit.files": "Files & Assets",
-  "edit.romLabel": "Game ROM (.nds)",
-  "edit.iconAuto": "Icon",
-  "edit.iconAutoText": "Extracted automatically from the ROM at build.",
-  "edit.shotsAuto": "Screenshots",
-  "edit.shotsAutoText": "Downloaded automatically (libretro) at build.",
-  "edit.fwdAuto": "Forwarder (.cia)",
-  "edit.fwdAutoText": "Generated automatically from the ROM at build.",
-  "edit.iconLabel": "Icon (1 only)",
-  "edit.shotsLabel": "Screenshots (Multiple)",
-  "edit.fwdLabel": "Forwarder (.cia)",
-  "edit.create": "Create game",
-  "edit.update": "Update",
-  "edit.analyzeFail": "ROM analysis failed",
-  "edit.loadFail": "Error loading game",
-  "edit.loadDataFail": "Loading error",
-  "edit.uploadFail": "Upload error",
-  "edit.titleRequired": "Title is required",
-  "edit.exists": "This game already exists",
-  "edit.saved": "Game saved successfully",
-  "edit.saveFail": "Error while saving",
-  "edit.publisher": "Publisher",
-  "edit.developer": "Developer",
-  "edit.genres": "Genres",
-  "edit.genresHint": "Comma separated. Auto-filled by analysis.",
-  "edit.descLabel": "Description",
-  "edit.descHint": "Game summary. Auto-filled via ndsdb when available.",
-
-  "notFound.title": "404",
-  "notFound.message": "Oops! Page not found.",
-  "notFound.description": "The page you are looking for does not exist, was deleted or moved.",
-  "notFound.back": "Back to home",
-};

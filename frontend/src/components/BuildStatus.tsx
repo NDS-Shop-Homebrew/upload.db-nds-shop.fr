@@ -108,7 +108,7 @@ export default function BuildStatus({ onTriggered }: BuildStatusProps) {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0">
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-lg flex items-center gap-2">
           <Rocket size={18} /> {t("build.title")}
         </CardTitle>
@@ -117,7 +117,7 @@ export default function BuildStatus({ onTriggered }: BuildStatusProps) {
           {running ? t("build.building") : starting ? t("build.launch") + "…" : t("build.launch")}
         </Button>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="flex flex-col gap-4">
         {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
 
         {!data && !error && (
@@ -142,7 +142,7 @@ export default function BuildStatus({ onTriggered }: BuildStatusProps) {
             </div>
 
             {running && (
-              <div className="space-y-1.5">
+              <div className="flex flex-col gap-1.5">
                 <Progress value={Math.min(100, progress * 25 + (steps.current ? 12 : 0))} className="h-2" />
                 <div className="flex justify-between text-xs text-muted-foreground">
                   {STEPS.map((s) => (

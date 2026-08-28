@@ -6,6 +6,7 @@ import { upsertNdsdbEntry } from "../lib/ndsdb";
 const router = express.Router();
 
 const API_INTERNAL_URL = process.env.API_INTERNAL_URL || "http://localhost:3000";
+const PUBLIC_URL = process.env.SITE_URL || "http://localhost:5174";
 
 // Déclenche la génération du Forwarder CIA auprès de api.db-nds-shop
 async function triggerCiaGeneration(gameId: string) {
@@ -109,7 +110,7 @@ const generatePrismaScripts = (
     scriptEntries.push({
       name: ndsName,
       type: "downloadFile",
-      file: `https://db-nds-shop.fr/games/${encodeURIComponent(ndsName)}`,
+      file: `${PUBLIC_URL}/games/${encodeURIComponent(ndsName)}`,
       output: `/roms/nds/${ndsName}`,
     });
 
@@ -118,7 +119,7 @@ const generatePrismaScripts = (
     scriptEntries.push({
       name: ndsName,
       type: "downloadFile",
-      file: `https://db-nds-shop.fr/forwarder/${encodeURIComponent(ciaName)}`,
+      file: `${PUBLIC_URL}/forwarder/${encodeURIComponent(ciaName)}`,
       output: `/${ciaName}`,
     });
     scriptEntries.push({
@@ -235,7 +236,6 @@ router.post("/", requireAdmin, async (req, res) => {
   const slug = slugify(title);
   const prismaScripts = generatePrismaScripts(downloads, screenshots);
 
-  // Vérifier si le jeu existe déjà par son slug ou son titleId
   const existing = await prisma.game.findFirst({
     where: {
       OR: [
@@ -256,7 +256,6 @@ router.post("/", requireAdmin, async (req, res) => {
     let game;
 
     if (existing) {
-      // Met à jour au lieu de bloquer avec un code 409
       game = await prisma.game.update({
         where: { id: existing.id },
         data: {
@@ -301,7 +300,6 @@ router.post("/", requireAdmin, async (req, res) => {
         include: { downloads: true, scripts: true, screenshots: true },
       });
     } else {
-      // Création d'un nouveau jeu
       game = await prisma.game.create({
         data: {
           id: slug,
@@ -344,11 +342,9 @@ router.post("/", requireAdmin, async (req, res) => {
       });
     }
 
-    // NDSDB + purge
     await upsertNdsdbEntry({ title, titleId, downloads, screenshots, ...rest });
     await purgeRequests(title);
 
-    // Déclenchement automatique de la génération du CIA Forwarder si un .nds est présent
     const hasNds = Object.keys(downloads).some((k) => /\.nds$/i.test(k));
     if (hasNds) {
       triggerCiaGeneration(game.id);
@@ -393,7 +389,6 @@ router.put("/:id", requireAdmin, async (req, res) => {
         ? rest.description
         : existingData.descriptionMd ?? existingData.description ?? null;
 
-    // Mettre à jour le jeu + resync sous-tables
     const game = await prisma.game.update({
       where: { id: existing.id },
       data: {
@@ -438,11 +433,9 @@ router.put("/:id", requireAdmin, async (req, res) => {
       include: { downloads: true, scripts: true, screenshots: true },
     });
 
-    // NDSDB + purge (non bloquant)
     await upsertNdsdbEntry({ title: game.title, titleId: game.titleId, downloads, screenshots, ...rest });
     await purgeRequests(game.title);
 
-    // Déclenchement automatique de la génération du CIA Forwarder si un .nds est présent
     const hasNds = Object.keys(downloads).some((k) => /\.nds$/i.test(k));
     if (hasNds) {
       triggerCiaGeneration(game.id);

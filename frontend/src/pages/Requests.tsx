@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { ThumbsUp, Trash2, RefreshCw, Loader2, Inbox } from "lucide-react";
+import { ThumbsUp, Trash2, RefreshCw, Inbox } from "lucide-react";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Skeleton } from "../components/ui/skeleton";
+import { Spinner } from "../components/ui/spinner";
 import { useAuth } from "../context/AuthContext";
 import { useUI } from "../context/UIContext";
 
@@ -56,20 +57,20 @@ export default function Requests() {
   };
 
   return (
-    <div className="p-6 md:p-8 w-full max-w-5xl mx-auto space-y-6">
+    <div className="p-6 md:p-8 w-full max-w-5xl mx-auto flex flex-col gap-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{t("requests.title")}</h1>
           <p className="text-muted-foreground text-sm">{t("requests.subtitle")}</p>
         </div>
         <Button onClick={load} variant="outline" size="sm" disabled={loading}>
-          {loading ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}{" "}
+          {loading ? <Spinner className="size-3.5" /> : <RefreshCw size={14} />}{" "}
           {t("requests.refresh")}
         </Button>
       </div>
 
       {loading ? (
-        <div className="space-y-3">
+        <div className="flex flex-col gap-3">
           {Array.from({ length: 4 }).map((_, i) => (
             <Card key={i}>
               <CardContent className="p-4">
@@ -87,7 +88,7 @@ export default function Requests() {
           </CardContent>
         </Card>
       ) : (
-        <ul className="space-y-3">
+        <ul className="flex flex-col gap-3">
           {rows.map((r) => (
             <li key={r.id}>
               <Card>
@@ -120,7 +121,7 @@ export default function Requests() {
                       onClick={() => remove(r.id)}
                     >
                       {deleting === r.id ? (
-                        <Loader2 size={16} className="animate-spin" />
+                        <Spinner />
                       ) : (
                         <Trash2 size={16} />
                       )}

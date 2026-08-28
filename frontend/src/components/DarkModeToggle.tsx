@@ -1,16 +1,19 @@
 import { Moon, Sun } from "lucide-react";
 import { useUI } from "../context/UIContext";
+import { Button } from "./ui/button";
 
 export function DarkModeToggle() {
-  const { darkMode, toggleDarkMode } = useUI();
+  const { dark, toggleDark } = useUI();
   return (
-    <button
-      onClick={toggleDarkMode}
-      className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground"
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={toggleDark}
+      className="text-muted-foreground"
       aria-label="Toggle Dark Mode"
       title="Toggle Dark Mode"
     >
-      {darkMode ? <Sun size={18} /> : <Moon size={18} />}
-    </button>
+      {dark ? <Sun size={18} /> : <Moon size={18} />}
+    </Button>
   );
 }

@@ -484,9 +484,9 @@ export default function EditGameForm() {
           <CardDescription>{t("edit.description")}</CardDescription>
         </CardHeader>
 
-        <CardContent className="space-y-8">
+        <CardContent className="flex flex-col gap-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
+            <div className="flex flex-col gap-2">
               <Label htmlFor="title">{t("edit.title")}</Label>
               <Input
                 id="title"
@@ -497,7 +497,7 @@ export default function EditGameForm() {
                 required
               />
             </div>
-            <div className="space-y-2">
+            <div className="flex flex-col gap-2">
               <Label htmlFor="author">{t("edit.author")}</Label>
               <Input
                 id="author"
@@ -507,7 +507,7 @@ export default function EditGameForm() {
                 placeholder={t("edit.authorPh")}
               />
             </div>
-            <div className="space-y-2">
+            <div className="flex flex-col gap-2">
               <Label htmlFor="developer">{t("edit.developer")}</Label>
               <Input
                 id="developer"
@@ -517,7 +517,7 @@ export default function EditGameForm() {
                 placeholder="Ex: Nintendo"
               />
             </div>
-            <div className="space-y-2">
+            <div className="flex flex-col gap-2">
               <Label htmlFor="publisher">{t("edit.publisher")}</Label>
               <Input
                 id="publisher"
@@ -527,7 +527,7 @@ export default function EditGameForm() {
                 placeholder="Ex: Nintendo"
               />
             </div>
-            <div className="space-y-2">
+            <div className="flex flex-col gap-2">
               <Label htmlFor="genres">{t("edit.genres")}</Label>
               <Input
                 id="genres"
@@ -542,7 +542,7 @@ export default function EditGameForm() {
             </div>
           </div>
 
-          <div className="space-y-2">
+          <div className="flex flex-col gap-2">
             <Label htmlFor="description">{t("edit.descLabel")}</Label>
             <Textarea
               id="description"
@@ -559,7 +559,7 @@ export default function EditGameForm() {
             </p>
           </div>
 
-          <div className="space-y-2">
+          <div className="flex flex-col gap-2">
             <Label htmlFor="titleId">{t("edit.titleId")}</Label>
             <div className="flex items-center gap-2">
               <Input
@@ -584,13 +584,13 @@ export default function EditGameForm() {
             )}
           </div>
 
-          <div className="space-y-3">
+          <div className="flex flex-col gap-3">
             <Label className="text-base">{t("edit.categories")}</Label>
             <div className="flex flex-wrap gap-4">
               {availableCategories.map((c) => (
                 <div
                   key={c}
-                  className="flex items-center space-x-2 bg-muted/50 px-3 py-2 rounded-md"
+                  className="flex items-center gap-2 bg-muted/50 px-3 py-2 rounded-md"
                 >
                   <Checkbox
                     id={`cat-${c}`}
@@ -605,13 +605,13 @@ export default function EditGameForm() {
             </div>
           </div>
 
-          <div className="space-y-3">
+          <div className="flex flex-col gap-3">
             <Label className="text-base">{t("edit.systems")}</Label>
             <div className="flex flex-wrap gap-4">
               {availableSystems.map((s) => (
                 <div
                   key={s}
-                  className="flex items-center space-x-2 bg-muted/50 px-3 py-2 rounded-md"
+                  className="flex items-center gap-2 bg-muted/50 px-3 py-2 rounded-md"
                 >
                   <Checkbox
                     id={`sys-${s}`}
@@ -626,13 +626,13 @@ export default function EditGameForm() {
             </div>
           </div>
 
-          <div className="space-y-3">
+          <div className="flex flex-col gap-3">
             <Label className="text-base">{t("edit.version")}</Label>
             <div className="flex flex-wrap gap-4">
               {availableVersions.map((v) => (
                 <div
                   key={v}
-                  className="flex items-center space-x-2 bg-muted/50 px-3 py-2 rounded-md"
+                  className="flex items-center gap-2 bg-muted/50 px-3 py-2 rounded-md"
                 >
                   <Checkbox
                     id={`ver-${v}`}
@@ -649,7 +649,7 @@ export default function EditGameForm() {
             </div>
           </div>
 
-          <div className="space-y-4">
+          <div className="flex flex-col gap-4">
             <h3 className="text-lg font-semibold border-b pb-2">
               {t("edit.files")}
             </h3>
@@ -667,7 +667,7 @@ export default function EditGameForm() {
 
               {isNew ? (
                 <>
-                  <div className="p-4 border rounded-md bg-muted/50 space-y-2">
+                  <div className="p-4 border rounded-md bg-muted/50 flex flex-col gap-2">
                     <p className="text-base font-semibold flex items-center gap-2">
                       <Sparkles size={16} className="text-primary" />{" "}
                       {t("edit.iconAuto")}
@@ -676,7 +676,7 @@ export default function EditGameForm() {
                       {t("edit.iconAutoText")}
                     </p>
                   </div>
-                  <div className="p-4 border rounded-md bg-muted/50 space-y-2">
+                  <div className="p-4 border rounded-md bg-muted/50 flex flex-col gap-2">
                     <p className="text-base font-semibold flex items-center gap-2">
                       <Sparkles size={16} className="text-primary" />{" "}
                       {t("edit.shotsAuto")}
@@ -685,7 +685,7 @@ export default function EditGameForm() {
                       {t("edit.shotsAutoText")}
                     </p>
                   </div>
-                  <div className="p-4 border rounded-md bg-muted/50 space-y-2">
+                  <div className="p-4 border rounded-md bg-muted/50 flex flex-col gap-2">
                     <p className="text-base font-semibold flex items-center gap-2">
                       <Sparkles size={16} className="text-primary" />{" "}
                       {t("edit.fwdAuto")}

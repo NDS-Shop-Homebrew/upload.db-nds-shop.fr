@@ -12,7 +12,7 @@ export default function NotFound() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
-        className="flex flex-col items-center text-center space-y-8"
+        className="flex flex-col items-center text-center gap-8"
       >
         <div className="relative flex items-center justify-center">
           <motion.div
@@ -26,7 +26,7 @@ export default function NotFound() {
           </h1>
         </div>
 
-        <div className="space-y-3 max-w-lg mx-auto">
+        <div className="flex flex-col gap-3 max-w-lg mx-auto">
           <h2 className="text-3xl sm:text-4xl font-extrabold text-foreground tracking-tight">
             {t("notFound.message")}
           </h2>

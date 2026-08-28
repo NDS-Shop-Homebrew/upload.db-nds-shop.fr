@@ -12,6 +12,7 @@ const BOXARTS_PATH = process.env.BOXARTS_PATH || path.join(STORAGE_PATH, "assets
 const SCREENSHOTS_PATH = process.env.SCREENSHOTS_PATH || path.join(STORAGE_PATH, "assets", "screenshots");
 const NDSDB_PATH = process.env.NDSDB_PATH || path.join(STORAGE_PATH, "ndsdb");
 const API_INTERNAL = process.env.API_INTERNAL_URL || "http://localhost:3000";
+const PUBLIC_URL = process.env.PUBLIC_URL || "http://localhost:5174";
 
 // Assure l'existence de tous les dossiers cibles
 [ICONS_PATH, BOXARTS_PATH, SCREENSHOTS_PATH, NDSDB_PATH].forEach((dir) => {
@@ -27,13 +28,19 @@ function fileExists(filePath: string): boolean {
   }
 }
 
-// Helper de téléchargement HTTP/HTTPS résilient
+// Helper de téléchargement HTTP/HTTPS résilient (rejette le contenu non-PNG corrompu)
 async function downloadToFile(url: string, destPath: string): Promise<boolean> {
   try {
     const res = await fetch(url);
     if (!res.ok) return false;
-    const arrayBuffer = await res.arrayBuffer();
-    fs.writeFileSync(destPath, Buffer.from(arrayBuffer));
+    const buf = Buffer.from(await res.arrayBuffer());
+    const isPng = buf.length > 8 && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47;
+    if (url.endsWith(".png") && !isPng) {
+      console.warn(`    ⚠ Rejet ${url} : contenu non-PNG (${buf.length} octets, probable 404/erreur).`);
+      return false;
+    }
+    if (fs.existsSync(destPath)) fs.unlinkSync(destPath);
+    fs.writeFileSync(destPath, buf);
     return true;
   } catch {
     return false;
@@ -93,8 +100,8 @@ async function fetchLibretroAssets(candidates: string[], baseSlug: string) {
     }
   }
 
-  const boxartUrl = boxartFound ? `https://db-nds-shop.fr/assets/boxarts/${baseSlug}-front.png` : null;
-  const screenshotUrl = snapFound ? `https://db-nds-shop.fr/assets/screenshots/${baseSlug}-snap-1.png` : null;
+  const boxartUrl = boxartFound ? `${PUBLIC_URL}/assets/boxarts/${baseSlug}-front.png` : null;
+  const screenshotUrl = snapFound ? `${PUBLIC_URL}/assets/screenshots/${baseSlug}-snap-1.png` : null;
 
   return { boxartUrl, screenshotUrl, boxartDest, snapDest, boxartCached: fileExists(boxartDest), snapCached: fileExists(snapDest) };
 }
@@ -102,6 +109,7 @@ async function fetchLibretroAssets(candidates: string[], baseSlug: string) {
 async function main() {
   console.log(`\n📦 Démarrage du pipeline de Build & Assets (Mode Incrémental)`);
   console.log(`📁 Stockage : ${STORAGE_PATH}`);
+  console.log(`🌐 PUBLIC_URL cible : ${PUBLIC_URL}`);
 
   const games = await prisma.game.findMany({
     include: {
@@ -127,7 +135,7 @@ async function main() {
     // 1. Gestion de l'icône
     if (fileExists(iconDest)) {
       // Déjà extrait en cache
-      updatedIconUrl = `https://db-nds-shop.fr/assets/icons/${game.id}.png`;
+      updatedIconUrl = `${PUBLIC_URL}/assets/icons/${game.id}.png`;
       console.log(`  ⚡ Icône déjà en cache : assets/icons/${game.id}.png`);
     } else if (ndsDownload) {
       // Extraction depuis la ROM si absent
@@ -152,9 +160,20 @@ async function main() {
           if (meta.icon) {
             const base64Data = meta.icon.replace(/^data:image\/png;base64,/, "");
             iconBuffer = Buffer.from(base64Data, "base64");
-            fs.writeFileSync(iconDest, iconBuffer);
-            updatedIconUrl = `https://db-nds-shop.fr/assets/icons/${game.id}.png`;
-            console.log(`  ✓ Nouvelle icône extraite (${meta.isDsi ? "DSi" : "DS"}) : assets/icons/${game.id}.png`);
+            const isPngIcon =
+              iconBuffer.length > 8 &&
+              iconBuffer[0] === 0x89 &&
+              iconBuffer[1] === 0x50 &&
+              iconBuffer[2] === 0x4e &&
+              iconBuffer[3] === 0x47;
+            if (!isPngIcon) {
+              console.warn(`  ⚠ Icône extraite invalide pour ${game.title}, ignorée.`);
+              iconBuffer = null;
+            } else {
+              fs.writeFileSync(iconDest, iconBuffer);
+              updatedIconUrl = `${PUBLIC_URL}/assets/icons/${game.id}.png`;
+              console.log(`  ✓ Nouvelle icône extraite (${meta.isDsi ? "DSi" : "DS"}) : assets/icons/${game.id}.png`);
+            }
           }
         } catch (err: unknown) {
           const message = err instanceof Error ? err.message : String(err);

@@ -127,7 +127,7 @@ export default function Users() {
   };
 
   return (
-    <div className="p-6 md:p-8 w-full max-w-6xl mx-auto space-y-6">
+    <div className="p-6 md:p-8 w-full max-w-6xl mx-auto flex flex-col gap-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -241,7 +241,7 @@ export default function Users() {
           <DialogHeader>
             <DialogTitle>{t("users.createTitle")}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
+          <div className="flex flex-col gap-3">
             <div>
               <label className="text-sm font-medium">{t("users.username")}</label>
               <Input value={newUser.username} onChange={(e) => setNewUser({ ...newUser, username: e.target.value })} className="mt-1" />
@@ -276,7 +276,7 @@ export default function Users() {
           <DialogHeader>
             <DialogTitle>{t("users.edit")}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
+          <div className="flex flex-col gap-3">
             <div>
               <label className="text-sm font-medium">{t("users.name")}</label>
               <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="mt-1" />
@@ -295,7 +295,7 @@ export default function Users() {
           <DialogHeader>
             <DialogTitle>{t("users.setPassword")}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
+          <div className="flex flex-col gap-3">
             <div>
               <label className="text-sm font-medium">{t("users.newPassword")}</label>
               <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="mt-1" />

@@ -9,8 +9,9 @@ import { Progress } from "../components/ui/progress";
 import { Skeleton } from "../components/ui/skeleton";
 import {
   Gamepad2, FileArchive, Image as ImageIcon, Download, Rocket,
-  CheckCircle2, XCircle, Loader2, TrendingUp, AlertTriangle, Disc3, Clock,
+  CheckCircle2, XCircle, TrendingUp, AlertTriangle, Disc3, Clock,
 } from "lucide-react";
+import { Spinner } from "../components/ui/spinner";
 import { useAuth } from "../context/AuthContext";
 import { useUI } from "../context/UIContext";
 
@@ -78,7 +79,7 @@ export default function Dashboard() {
   });
 
   return (
-    <div className="p-6 md:p-8 w-full max-w-7xl mx-auto space-y-6">
+    <div className="p-6 md:p-8 w-full max-w-7xl mx-auto flex flex-col gap-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{t("dashboard.title")}</h1>
@@ -89,7 +90,7 @@ export default function Dashboard() {
         </div>
         <div className="flex items-center gap-2">
           <Button onClick={load} variant="outline" size="sm" disabled={loading}>
-            {loading ? <Loader2 size={14} className="animate-spin" /> : t("dashboard.refresh")}
+            {loading ? <Spinner className="size-3.5" /> : t("dashboard.refresh")}
           </Button>
         </div>
       </div>
@@ -136,7 +137,7 @@ export default function Dashboard() {
               </div>
             </div>
             {stats.incompleteGames.length > 0 && (
-              <ul className="mt-3 pt-3 border-t border-amber-200 space-y-1">
+              <ul className="mt-3 pt-3 border-t border-amber-200 flex flex-col gap-1">
                 {stats.incompleteGames.map((g) => (
                   <li key={g.id || g.title} className="flex items-center gap-2 text-sm">
                     <span className="font-medium truncate">{g.title}</span>
@@ -237,7 +238,7 @@ export default function Dashboard() {
           {/* Jeux récents */}
           <Card>
             <CardHeader><CardTitle className="text-base">{t("dashboard.recentGames")}</CardTitle></CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="flex flex-col gap-2">
               {stats.recentGames.length === 0 && (
                 <p className="text-sm text-muted-foreground">—</p>
               )}
@@ -261,7 +262,7 @@ export default function Dashboard() {
       {topDownloads.length > 0 && (
         <Card>
           <CardHeader><CardTitle className="text-base">{t("dashboard.topDownloads")}</CardTitle></CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="flex flex-col gap-2">
             {topDownloads.map(([game, count]) => (
               <div key={game} className="flex items-center gap-3">
                 <span className="text-sm truncate w-56 shrink-0">{game}</span>

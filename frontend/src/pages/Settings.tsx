@@ -38,7 +38,7 @@ export default function Settings() {
   };
 
   return (
-    <div className="p-6 md:p-8 w-full max-w-2xl mx-auto space-y-6">
+    <div className="p-6 md:p-8 w-full max-w-2xl mx-auto flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <SettingsIcon className="w-6 h-6 text-primary" /> {t("settings.title")}
@@ -54,17 +54,17 @@ export default function Settings() {
 
       <Card>
         <CardHeader><CardTitle className="text-base flex items-center gap-2"><User size={16} /> {t("settings.profile")}</CardTitle></CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-1.5">
+        <CardContent className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
             <Label htmlFor="username">{t("settings.username")}</Label>
             <Input id="username" value={user?.username || ""} disabled className="bg-muted/50" />
             <p className="text-xs text-muted-foreground">{t("settings.usernameNote")}</p>
           </div>
-          <div className="space-y-1.5">
+          <div className="flex flex-col gap-1.5">
             <Label htmlFor="name">{t("settings.name")}</Label>
             <Input id="name" placeholder={t("settings.namePh")} value={name} onChange={(e) => setName(e.target.value)} />
           </div>
-          <div className="space-y-1.5">
+          <div className="flex flex-col gap-1.5">
             <Label htmlFor="email" className="flex items-center gap-1.5"><Mail size={14} /> {t("settings.email")}</Label>
             <Input id="email" type="email" value={user?.email || ""} disabled className="bg-muted/50" />
             <p className="text-xs text-muted-foreground">{t("settings.emailNote")}</p>
@@ -75,36 +75,36 @@ export default function Settings() {
 
       <Card>
         <CardHeader><CardTitle className="text-base flex items-center gap-2"><Sun size={16} /> {t("settings.preferences")}</CardTitle></CardHeader>
-        <CardContent className="space-y-4">
-          <button onClick={toggleDarkMode} className="w-full flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted transition-colors">
+        <CardContent className="flex flex-col gap-4">
+          <Button variant="outline" onClick={toggleDarkMode} className="w-full justify-between p-3 rounded-lg border-border bg-transparent hover:bg-muted font-normal">
             <span className="flex items-center gap-2 text-sm">
               {darkMode ? <Moon size={16} className="text-primary" /> : <Sun size={16} className="text-primary" />}
               {t("settings.darkMode")}
             </span>
             <Switch checked={darkMode} onCheckedChange={toggleDarkMode} aria-label={t("settings.darkMode")} />
-          </button>
-          <button onClick={toggleLang} className="w-full flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted transition-colors">
+          </Button>
+          <Button variant="outline" onClick={toggleLang} className="w-full justify-between p-3 rounded-lg border-border bg-transparent hover:bg-muted font-normal">
             <span className="flex items-center gap-2 text-sm">
               <Languages size={16} className="text-primary" />
               {t("settings.language")}
             </span>
             <span className="text-sm font-medium">{lang === "fr" ? "Français" : "English"}</span>
-          </button>
+          </Button>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader><CardTitle className="text-base flex items-center gap-2"><KeyRound size={16} /> {t("settings.changePassword")}</CardTitle></CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-1.5">
+        <CardContent className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
             <Label htmlFor="current">{t("settings.currentPassword")}</Label>
             <Input id="current" type="password" value={currentPwd} onChange={(e) => setCurrentPwd(e.target.value)} />
           </div>
-          <div className="space-y-1.5">
+          <div className="flex flex-col gap-1.5">
             <Label htmlFor="new">{t("settings.newPassword")}</Label>
             <Input id="new" type="password" value={newPwd} onChange={(e) => setNewPwd(e.target.value)} />
           </div>
-          <div className="space-y-1.5">
+          <div className="flex flex-col gap-1.5">
             <Label htmlFor="confirm">{t("settings.confirmPassword")}</Label>
             <Input id="confirm" type="password" value={confirmPwd} onChange={(e) => setConfirmPwd(e.target.value)} />
           </div>

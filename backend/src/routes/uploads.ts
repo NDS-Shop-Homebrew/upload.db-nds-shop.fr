@@ -15,6 +15,8 @@ const PATHS = {
   FORWARDER: process.env.FORWARDER_PATH || "/srv/nds-shop/db/frontend/public/forwarder",
 };
 
+const PUBLIC_URL = process.env.SITE_URL || "http://localhost:5174";
+
 const createStorage = (dest: string) =>
   multer.diskStorage({
     destination: (_req, _file, cb) => {
@@ -77,7 +79,7 @@ const upload = {
 router.post("/icon", upload.icon.single("icon"), (req, res) => {
   if (!req.file) return res.status(400).json({ error: "Aucun fichier reçu" });
   res.json({
-    url: `https://db-nds-shop.fr/assets/images/icons/${encodeURIComponent(req.file.filename)}`,
+    url: `${PUBLIC_URL}/assets/images/icons/${encodeURIComponent(req.file.filename)}`,
     name: req.file.filename,
     size: req.file.size,
   });
@@ -89,7 +91,7 @@ router.post(
   (req, res) => {
     if (!req.file) return res.status(400).json({ error: "Aucun fichier reçu" });
     res.json({
-      url: `https://db-nds-shop.fr/assets/images/boxart/${encodeURIComponent(req.file.filename)}`,
+      url: `${PUBLIC_URL}/assets/images/boxart/${encodeURIComponent(req.file.filename)}`,
       name: req.file.filename,
       size: req.file.size,
     });
@@ -99,7 +101,7 @@ router.post(
 router.post("/nds", upload.nds.single("nds"), (req, res) => {
   if (!req.file) return res.status(400).json({ error: "Aucun fichier reçu" });
   res.json({
-    url: `https://db-nds-shop.fr/api/v1/download/${encodeURIComponent(req.file.filename)}`,
+    url: `${PUBLIC_URL}/api/v1/download/${encodeURIComponent(req.file.filename)}`,
     name: req.file.filename,
     size: req.file.size,
   });
@@ -108,7 +110,7 @@ router.post("/nds", upload.nds.single("nds"), (req, res) => {
 router.post("/cia", upload.cia.single("cia"), (req, res) => {
   if (!req.file) return res.status(400).json({ error: "Aucun fichier reçu" });
   res.json({
-    url: `https://db-nds-shop.fr/forwarder/${encodeURIComponent(req.file.filename)}`,
+    url: `${PUBLIC_URL}/forwarder/${encodeURIComponent(req.file.filename)}`,
     name: req.file.filename,
     size: req.file.size,
   });

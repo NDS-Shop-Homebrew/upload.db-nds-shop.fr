@@ -120,7 +120,7 @@ export default function Team() {
   }).slice(0, 100);
 
   return (
-    <div className="p-6 md:p-8 w-full max-w-6xl mx-auto space-y-6">
+    <div className="p-6 md:p-8 w-full max-w-6xl mx-auto flex flex-col gap-6">
       <div className="flex flex-wrap justify-between items-center gap-3">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -166,7 +166,7 @@ export default function Team() {
         <>
           {/* Équipe actuelle */}
           <Card>
-            <CardContent className="p-4 space-y-3">
+            <CardContent className="p-4 flex flex-col gap-3">
               <h2 className="font-semibold">{t("team.members")} — {team.length}</h2>
               {team.length === 0 && <p className="text-sm text-muted-foreground">{t("team.noMembers")}</p>}
               {team.map((tm, i) => {
@@ -210,7 +210,7 @@ export default function Team() {
 
           {/* Ajouter un membre */}
           <Card>
-            <CardContent className="p-4 space-y-3">
+            <CardContent className="p-4 flex flex-col gap-3">
               <div className="relative max-w-md">
                 <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -220,17 +220,18 @@ export default function Team() {
                   className="pl-9"
                 />
               </div>
-              <div className="max-h-[320px] overflow-y-auto space-y-1">
+              <div className="max-h-[320px] overflow-y-auto flex flex-col gap-1">
                 {searchable.length === 0 && (
                   <p className="p-4 text-center text-sm text-muted-foreground">
                     {members.length === 0 ? t("team.noMembers") : t("team.noResults")}
                   </p>
                 )}
                 {searchable.map((m) => (
-                  <button
+                  <Button
                     key={m.id}
+                    variant="outline"
                     onClick={() => { add(m.id); setSearch(""); }}
-                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors hover:bg-muted/30 border border-transparent hover:border-border"
+                    className="w-full justify-start gap-3 px-3 py-2 rounded-lg text-left border-transparent hover:border-border hover:bg-muted/30 bg-transparent font-normal"
                   >
                     <Avatar className="w-8 h-8 shrink-0">
                       {m.avatar && <AvatarImage src={m.avatar} alt={m.global_name} />}
@@ -241,7 +242,7 @@ export default function Team() {
                       <p className="text-xs text-muted-foreground truncate">{m.nick || m.username}</p>
                     </div>
                     {m.roles?.length > 0 && <Badge variant="outline" className="shrink-0 text-[10px]">{m.roles.length} rôle{m.roles.length > 1 ? "s" : ""}</Badge>}
-                  </button>
+                  </Button>
                 ))}
               </div>
             </CardContent>

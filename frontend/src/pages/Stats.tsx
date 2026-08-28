@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { Button } from "../components/ui/button";
 import { Alert, AlertDescription } from "../components/ui/alert";
 import { Skeleton } from "../components/ui/skeleton";
-import { RefreshCw, Loader2 } from "lucide-react";
+import { RefreshCw } from "lucide-react";
+import { Spinner } from "../components/ui/spinner";
 import { useUI } from "../context/UIContext";
 
 interface DayDl { date: string; total: number; nds: number; cia: number }
@@ -73,14 +74,14 @@ export default function Stats() {
     Object.entries(rec).sort((a, b) => a[0].localeCompare(b[0])).map(([month, count]) => ({ month, count }));
 
   return (
-    <div className="p-6 md:p-8 w-full max-w-7xl mx-auto space-y-6">
+    <div className="p-6 md:p-8 w-full max-w-7xl mx-auto flex flex-col gap-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{t("stats.title")}</h1>
           <p className="text-muted-foreground text-sm">{t("stats.subtitle")}</p>
         </div>
         <Button onClick={load} variant="outline" size="sm" disabled={loading}>
-          {loading ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />} {t("stats.refresh")}
+          {loading ? <Spinner className="size-3.5" /> : <RefreshCw size={14} />} {t("stats.refresh")}
         </Button>
       </div>
 

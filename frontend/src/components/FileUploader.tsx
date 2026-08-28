@@ -1,5 +1,6 @@
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
+import { Button } from "./ui/button";
 import { UploadCloud } from "lucide-react";
 import SafeImg from "./SafeImg";
 
@@ -74,13 +75,15 @@ export function FileUploader({
                 {item.display}
               </span>
               {onRemove && (type === "screenshot" || type === "nds") && (
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon-xs"
                   onClick={() => onRemove(type, item.id)}
-                  className="text-destructive hover:text-destructive/80 ml-1 font-bold"
+                  className="ml-1 rounded-full text-destructive hover:text-destructive/80 hover:bg-transparent font-bold"
                 >
                   &times;
-                </button>
+                </Button>
               )}
             </div>
           ))}

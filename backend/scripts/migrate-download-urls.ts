@@ -5,53 +5,81 @@ import prisma from "../src/lib/prisma";
 const GAMES_JSON =
   process.env.GAMES_JSON_PATH || "/srv/nds-shop/db/frontend/public/games.json";
 
-async function main() {
-  console.log("🔄 Début de la migration des URLs de téléchargement...\n");
+const PUBLIC_URL = process.env.SITE_URL || "http://localhost:5174";
 
+async function main() {
+  console.log(`🔄 Début de la migration des URLs de téléchargement (Cible: ${PUBLIC_URL})...\n`);
+
+  // Les deux formats à rechercher (l'ancien avec la variable non-interpolée et le nouveau avec la vraie URL)
+  const oldTargetStr = "${PUBLIC_URL}/games/";
+  const currentTargetStr = `${PUBLIC_URL}/games/`;
+  const replacementStr = `${PUBLIC_URL}/api/v1/download/`;
+
+  // 1. Table GameDownload
   const allDownloads = await prisma.gameDownload.findMany({
     where: {
-      url: {
-        contains: "https://db-nds-shop.fr/games/",
-      },
+      OR: [
+        { url: { contains: oldTargetStr } },
+        { url: { contains: currentTargetStr } },
+      ],
     },
   });
 
   let dbDownloadsUpdated = 0;
   for (const dl of allDownloads) {
-    const newUrl = dl.url.replace(
-      "https://db-nds-shop.fr/games/",
-      "https://db-nds-shop.fr/api/v1/download/",
-    );
-    await prisma.gameDownload.update({
-      where: { id: dl.id },
-      data: { url: newUrl },
-    });
-    dbDownloadsUpdated++;
+    let newUrl = dl.url;
+    if (newUrl.includes(oldTargetStr)) {
+      newUrl = newUrl.replaceAll(oldTargetStr, replacementStr);
+    }
+    if (newUrl.includes(currentTargetStr)) {
+      newUrl = newUrl.replaceAll(currentTargetStr, replacementStr);
+    }
+    
+    if (newUrl !== dl.url) {
+      await prisma.gameDownload.update({
+        where: { id: dl.id },
+        data: { url: newUrl },
+      });
+      dbDownloadsUpdated++;
+    }
   }
-  console.log(`📦 BDD (table GameDownload) : ${dbDownloadsUpdated} URL(s) mise(s) à jour`);
+  console.log(
+    `📦 BDD (table GameDownload) : ${dbDownloadsUpdated} URL(s) mise(s) à jour`,
+  );
 
+  // 2. Table GameScript
   const allScripts = await prisma.gameScript.findMany({
     where: {
-      file: {
-        contains: "https://db-nds-shop.fr/games/",
-      },
+      OR: [
+        { file: { contains: oldTargetStr } },
+        { file: { contains: currentTargetStr } },
+      ],
     },
   });
 
   let dbScriptsUpdated = 0;
   for (const sc of allScripts) {
-    const newFile = sc.file.replace(
-      "https://db-nds-shop.fr/games/",
-      "https://db-nds-shop.fr/api/v1/download/",
-    );
-    await prisma.gameScript.update({
-      where: { id: sc.id },
-      data: { file: newFile },
-    });
-    dbScriptsUpdated++;
-  }
-  console.log(`📜 BDD (table GameScript)   : ${dbScriptsUpdated} script(s) mis à jour`);
+    let newFile = sc.file;
+    if (newFile.includes(oldTargetStr)) {
+      newFile = newFile.replaceAll(oldTargetStr, replacementStr);
+    }
+    if (newFile.includes(currentTargetStr)) {
+      newFile = newFile.replaceAll(currentTargetStr, replacementStr);
+    }
 
+    if (newFile !== sc.file) {
+      await prisma.gameScript.update({
+        where: { id: sc.id },
+        data: { file: newFile },
+      });
+      dbScriptsUpdated++;
+    }
+  }
+  console.log(
+    `📜 BDD (table GameScript)   : ${dbScriptsUpdated} script(s) mis à jour`,
+  );
+
+  // 3. Fichier games.json
   let jsonChanged = 0;
   if (fs.existsSync(GAMES_JSON)) {
     try {
@@ -61,20 +89,23 @@ async function main() {
         for (const [, details] of Object.entries(g.downloads)) {
           if (
             typeof details === "object" &&
-            (details as any).url &&
-            (details as any).url.startsWith("https://db-nds-shop.fr/games/")
+            details !== null &&
+            (details as any).url
           ) {
-            (details as any).url = (details as any).url.replace(
-              "https://db-nds-shop.fr/games/",
-              "https://db-nds-shop.fr/api/v1/download/",
-            );
-            jsonChanged++;
+            let urlVal = (details as any).url;
+            if (urlVal.includes(oldTargetStr) || urlVal.includes(currentTargetStr)) {
+              urlVal = urlVal.replaceAll(oldTargetStr, replacementStr).replaceAll(currentTargetStr, replacementStr);
+              (details as any).url = urlVal;
+              jsonChanged++;
+            }
           }
         }
       }
       if (jsonChanged > 0) {
         fs.writeFileSync(GAMES_JSON, JSON.stringify(games, null, 2), "utf8");
-        console.log(`📄 Fichier games.json        : ${jsonChanged} URL(s) mise(s) à jour`);
+        console.log(
+          `📄 Fichier games.json        : ${jsonChanged} URL(s) mise(s) à jour`,
+        );
       }
     } catch (err: any) {
       console.warn(`⚠️ Erreur games.json: ${err.message}`);
