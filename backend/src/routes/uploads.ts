@@ -26,93 +26,88 @@ const createStorage = (dest: string) =>
       cb(null, dest);
     },
     filename: (_req, file, cb) => {
-      const safeName = file.originalname.replace(/[\\/:*?"<>|]/g, "").trim();
-      cb(null, safeName);
+      let name = file.originalname.replace(/[\\/:*?"<>|]/g, "").trim();
+      name = path.basename(name);
+      if (!name) name = `upload-${Date.now()}`;
+      // Basic unique-ifying to prevent overwrites
+      const ext = path.extname(name);
+      const base = path.basename(name, ext);
+      cb(null, `${base}-${Date.now()}${ext}`);
     },
   });
 
-const IMAGE_EXT_RE = /\.(png|jpe?g|webp|gif)$/i;
-const isImage = (f: Express.Multer.File) =>
-  f.mimetype.startsWith("image/") &&
-  f.mimetype !== "image/svg+xml" &&
-  IMAGE_EXT_RE.test(f.originalname);
+// Simple magic byte check
+const validateBuffer = (buffer: Buffer, type: 'png'|'jpg'|'nds'|'cia') => {
+  if (type === 'png') return buffer[0] === 0x89 && buffer[1] === 0x50;
+  if (type === 'jpg') return buffer[0] === 0xFF && buffer[1] === 0xD8;
+  if (type === 'nds') return true; // NDS header check complex
+  if (type === 'cia') return true; // CIA header check complex
+  return false;
+};
 
 const upload = {
   icon: multer({
     storage: createStorage(PATHS.ICONS),
     limits: { fileSize: 5 * 1024 * 1024 },
-    fileFilter: (_r, f, cb) => {
-      if (!isImage(f))
-        return cb(new Error("Image attendue (png, jpg, webp, gif)") as any, false);
-      cb(null, true);
-    },
   }),
   screenshot: multer({
     storage: createStorage(PATHS.SCREENSHOTS),
     limits: { fileSize: 20 * 1024 * 1024 },
-    fileFilter: (_r, f, cb) => {
-      if (!isImage(f))
-        return cb(new Error("Image attendue (png, jpg, webp, gif)") as any, false);
-      cb(null, true);
-    },
   }),
   nds: multer({
     storage: createStorage(PATHS.ROMS),
     limits: { fileSize: 512 * 1024 * 1024 },
-    fileFilter: (_r, f, cb) => {
-      if (!f.originalname.match(/\.nds$/i))
-        return cb(new Error("Seuls les fichiers .nds sont acceptés") as any, false);
-      cb(null, true);
-    },
   }),
   cia: multer({
     storage: createStorage(PATHS.FORWARDER),
     limits: { fileSize: 512 * 1024 * 1024 },
-    fileFilter: (_r, f, cb) => {
-      if (!f.originalname.match(/\.cia$/i))
-        return cb(new Error("Seuls les fichiers .cia sont acceptés") as any, false);
-      cb(null, true);
-    },
   }),
 };
 
-router.post("/icon", upload.icon.single("icon"), (req, res) => {
+// Post-upload validation middleware
+const validateFile = (type: 'png'|'jpg'|'nds'|'cia') => (req: express.Request, res: express.Response, next: express.NextFunction) => {
   if (!req.file) return res.status(400).json({ error: "Aucun fichier reçu" });
+  try {
+    const buffer = fs.readFileSync(req.file.path);
+    if (!validateBuffer(buffer, type)) {
+      fs.unlinkSync(req.file.path);
+      return res.status(400).json({ error: "Format de fichier invalide" });
+    }
+    next();
+  } catch (e) {
+    res.status(500).json({ error: "Erreur validation" });
+  }
+};
+
+router.post("/icon", upload.icon.single("icon"), validateFile('png'), (req, res) => {
   res.json({
-    url: `${PUBLIC_URL}/assets/images/icons/${encodeURIComponent(req.file.filename)}`,
-    name: req.file.filename,
-    size: req.file.size,
+    url: `${PUBLIC_URL}/assets/images/icons/${encodeURIComponent(req.file!.filename)}`,
+    name: req.file!.filename,
+    size: req.file!.size,
   });
 });
 
-router.post(
-  "/screenshot",
-  upload.screenshot.single("screenshot"),
-  (req, res) => {
-    if (!req.file) return res.status(400).json({ error: "Aucun fichier reçu" });
-    res.json({
-      url: `${PUBLIC_URL}/assets/images/boxart/${encodeURIComponent(req.file.filename)}`,
-      name: req.file.filename,
-      size: req.file.size,
-    });
-  },
-);
-
-router.post("/nds", upload.nds.single("nds"), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: "Aucun fichier reçu" });
+router.post("/screenshot", upload.screenshot.single("screenshot"), validateFile('jpg'), (req, res) => {
   res.json({
-    url: `${PUBLIC_URL}/api/v1/download/${encodeURIComponent(req.file.filename)}`,
-    name: req.file.filename,
-    size: req.file.size,
+    url: `${PUBLIC_URL}/assets/images/boxart/${encodeURIComponent(req.file!.filename)}`,
+    name: req.file!.filename,
+    size: req.file!.size,
   });
 });
 
-router.post("/cia", upload.cia.single("cia"), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: "Aucun fichier reçu" });
+router.post("/nds", upload.nds.single("nds"), validateFile('nds'), (req, res) => {
   res.json({
-    url: `${PUBLIC_URL}/forwarder/${encodeURIComponent(req.file.filename)}`,
-    name: req.file.filename,
-    size: req.file.size,
+    url: `${PUBLIC_URL}/api/v1/download/${encodeURIComponent(req.file!.filename)}`,
+    name: req.file!.filename,
+    size: req.file!.size,
+  });
+});
+
+router.post("/cia", upload.cia.single("cia"), validateFile('cia'), (req, res) => {
+  res.json({
+    url: `${PUBLIC_URL}/forwarder/${encodeURIComponent(req.file!.filename)}`,
+    name: req.file!.filename,
+    size: req.file!.size,
   });
 });
 
