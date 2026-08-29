@@ -10,7 +10,6 @@
   },
   "dependencies": {
     "@nds-shop/prisma": "file:../../prisma",
-    "@prisma/client": "^7.10.0",
     "bcrypt": "^6.0.0",
     "better-auth": "^1.6.27",
     "cors": "^2.8.5",
@@ -27,7 +26,6 @@
     "@types/morgan": "^1.9.10",
     "@types/multer": "^2.0.0",
     "@types/node": "^24.13.3",
-    "prisma": "^7.10.0",
     "tsx": "^4.23.12",
     "typescript": "^5.9.2"
   }
