@@ -76,13 +76,13 @@ export default function Settings() {
       <Card>
         <CardHeader><CardTitle className="text-base flex items-center gap-2"><Sun size={16} /> {t("settings.preferences")}</CardTitle></CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <Button variant="outline" onClick={toggleDarkMode} className="w-full justify-between p-3 rounded-lg border-border bg-transparent hover:bg-muted font-normal">
+          <label className="flex items-center justify-between w-full p-3 rounded-lg border border-border bg-transparent hover:bg-muted cursor-pointer">
             <span className="flex items-center gap-2 text-sm">
               {darkMode ? <Moon size={16} className="text-primary" /> : <Sun size={16} className="text-primary" />}
               {t("settings.darkMode")}
             </span>
             <Switch checked={darkMode} onCheckedChange={toggleDarkMode} aria-label={t("settings.darkMode")} />
-          </Button>
+          </label>
           <Button variant="outline" onClick={toggleLang} className="w-full justify-between p-3 rounded-lg border-border bg-transparent hover:bg-muted font-normal">
             <span className="flex items-center gap-2 text-sm">
               <Languages size={16} className="text-primary" />
