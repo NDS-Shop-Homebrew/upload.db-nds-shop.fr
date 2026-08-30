@@ -1,6 +1,8 @@
 # Secrets — jamais commiter
 backend/.env
 frontend/.env
+backend/.env.production
+frontend/.env.production
 
 # Node
 node_modules/
